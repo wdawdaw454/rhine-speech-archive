@@ -5,8 +5,8 @@ import { records, columnFiles, fileLocation, archiveRowPeriod } from '../src/dat
 import { fileAtCell } from '../src/archive-loop.ts';
 
 test('every model/mode capability has its own stable archive', () => {
-  assert.deepEqual(speechArchives.map(r => r.id), [1, 2, 3, 5, 6, 7, 8, 9, 10].map(i => `X-${String(i).padStart(3, '0')}`));
-  assert.equal(new Set(speechArchives.map(r => `${r.feature}/${r.model}`)).size, 9);
+  assert.deepEqual(speechArchives.map(r => r.id), [1, 2, 3, 5, 6, 7, 8, 9, 10, 11].map(i => `X-${String(i).padStart(3, '0')}`));
+  assert.equal(new Set(speechArchives.map(r => `${r.feature}/${r.model}`)).size, 10);
   assert.equal(speechArchives.filter(r => r.feature === 'record').length, 3);
   assert.equal(speechArchives.filter(r => r.feature === 'live').length, 3);
   assert.deepEqual(speechArchives.filter(r => r.feature === 'target').map(r => r.model), ['sensevoice-realtime']);
@@ -14,14 +14,20 @@ test('every model/mode capability has its own stable archive', () => {
   assert.equal(speechArchives.filter(r => r.feature === 'voice').length, 1);
 });
 test('all four columns remain browsable with independent lengths', () => {
-  assert.equal(speechColumns.length, 4);
-  assert.deepEqual(speechColumns.map((_, lane) => columnFiles(lane).length), [3, 2, 3, 1]);
+  assert.equal(speechColumns.length, 5);
+  assert.deepEqual(speechColumns.map((_, lane) => columnFiles(lane).length), [3, 2, 3, 1, 1]);
   records.forEach((record, index) => {
     const { lane, row } = fileLocation(index);
     assert.equal(fileAtCell({ lane, row }), index);
     assert.equal(fileAtCell({ lane: lane + speechColumns.length, row: row + archiveRowPeriod }), index);
     assert.equal(fileAtCell({ lane: lane - speechColumns.length, row: row - archiveRowPeriod }), index);
   });
+});
+test('model management remains available before any model is installed', () => {
+  const lane = speechColumns.indexOf('模型管理');
+  const index = speechArchives.findIndex(record => record.id === 'X-011');
+  assert.equal(speechArchives[index].feature, 'models');
+  assert.equal(fileAtCell({ lane, row: fileLocation(index).row }), index);
 });
 test('voice enrollment shares the target speaker lane and remains an independent archive', () => {
   const lane = speechColumns.indexOf('目标说话人');

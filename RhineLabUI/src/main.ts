@@ -49,6 +49,7 @@ const $ = <T extends HTMLElement = HTMLElement>(selector: string) =>
 import { logo, brandHeading } from "./brand";
 import { SpeechArchiveControls } from "./speech";
 import { SampleXArchiveControls } from "./sample-x";
+import { ModelManagerControls } from "./model-manager";
 import { speechArchives } from "./speech-catalog";
 
 $("#stage").innerHTML = `
@@ -222,6 +223,7 @@ const speechControls = new SpeechArchiveControls(muted => { speechCapturing = mu
 });
 const reviewEntry = reviewParams.has("scene") || reviewParams.has("time") || reviewParams.get("review") === "1";
 const sampleXControls = new SampleXArchiveControls(muted => { sampleXCapturing = muted; configureAudio(); }, notify);
+const modelManagerControls = new ModelManagerControls(notify);
 let started = false;
 const loading = $("#loading");
 // The entry screen uses the actual viewport, including portrait phones; the
@@ -520,6 +522,7 @@ function renderDetail() {
   // Move the live controls, rather than recreate them while a session runs.
   speechControls.root.remove();
   sampleXControls.root.remove();
+  modelManagerControls.root.remove();
   $("#detail-content").classList.add("speech-detail");
   $("#detail-content").innerHTML = `
     <div class="detail-kicker"><span>FILE ${r.id}</span><span>${escapeHtml(r.clearance)}</span></div>
@@ -530,8 +533,10 @@ function renderDetail() {
     <div id="speech-archive-controls"></div>
     <div class="detail-actions"><button class="solid-button" data-action="bookmark">${saved.has(r.id) ? "− REMOVE FROM SAVED" : "＋ SAVE ARCHIVE"}<span>${saved.has(r.id) ? "已收藏" : "收藏功能"}</span></button></div>
     <div class="detail-footnote"><span>${escapeHtml(r.category)}</span><span>${r.id} / ${String(records.length).padStart(3, "0")}</span></div>`;
-  if (speechArchives[selected].model === 'sample-x') sampleXControls.open($("#speech-archive-controls"));
-  else speechControls.openArchive(speechArchives[selected], $("#speech-archive-controls"));
+  const archive = speechArchives[selected];
+  if (archive.feature === 'models') modelManagerControls.open($("#speech-archive-controls"));
+  else if (archive.model === 'sample-x') sampleXControls.open($("#speech-archive-controls"));
+  else speechControls.openArchive(archive, $("#speech-archive-controls"));
   $("#detail-content").setAttribute("tabindex", "-1");
   $('[data-action="bookmark"]').setAttribute("aria-pressed", String(saved.has(r.id)));
   documentDecryption.reset($("#detail-content"), prefs.reduced || !scene || scene.decryptionFrame.phase === "clear");

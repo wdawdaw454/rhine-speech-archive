@@ -2,7 +2,7 @@ import { escapeHtml as esc } from './html';
 import './speech.css';
 import { speechArchives } from './speech-catalog';
 
-type Feature = 'live' | 'record' | 'target' | 'meeting' | 'voice';
+type Feature = 'live' | 'record' | 'target' | 'meeting' | 'voice' | 'models';
 type Source = 'microphone' | 'system' | 'wav';
 interface Model { id: string; name: string; description: string; device: string; available: boolean; modes: string[]; recognition_types: string[] }
 interface Status {
@@ -23,6 +23,7 @@ export const features: Record<Feature, { title: string; code: string; mode: stri
   target: { title: '目标说话人', code: 'TARGET SPEAKER', mode: 'streaming', type: 'target', hint: '仅转写与已注册声纹匹配的声音。使用 SenseVoice，预览可修订。' },
   meeting: { title: '会议转写', code: 'MEETING TRANSCRIPTION', mode: 'offline', type: 'meeting', hint: '整段生成文字、说话人编号与时间戳。编号不代表真实身份。' },
   voice: { title: '声纹管理', code: 'VOICE ENROLLMENT', mode: 'streaming', type: 'target', hint: '注册 3–30 秒清晰单人语音。声纹仅保存在本机，重新注册会替换原声纹。' },
+  models: { title: '模型管理', code: 'MODEL REGISTRY', mode: 'streaming', type: 'normal', hint: '集中管理本地识别模型。' },
 };
 const activeStates = new Set(['loading', 'starting', 'listening', 'stopping', 'transcribing', 'enrolling', 'enroll_recording']);
 const captureStates = new Set(['starting', 'listening', 'stopping', 'enroll_recording']);
@@ -45,6 +46,7 @@ export class SpeechArchiveControls {
   private previousSegments = '';
   private recordingUrl = '';
   private deviceRequest = 0;
+  private modelsRefreshedAt = 0;
   constructor(private mute: (muted: boolean) => void, private notify: (message: string) => void, private manageVoice: () => void) {
     this.root.id = 'speech-archive';
     this.root.className = 'speech-archive';
@@ -226,7 +228,10 @@ export class SpeechArchiveControls {
     if (!this.pending && !this.polling) {
       this.polling = true; const generation = this.generation;
       try {
-        if (!this.models.length) { this.models = (await this.request<{ models: Model[] }>('/api/models')).models; this.options(); }
+        if (!this.models.length || Date.now() - this.modelsRefreshedAt > 5000) {
+          this.models = (await this.request<{ models: Model[] }>('/api/models')).models;
+          this.modelsRefreshedAt = Date.now(); this.options();
+        }
         const status = await this.request<Status>('/api/status');
         if (generation === this.generation) { this.connected = true; this.accept(status); }
       } catch { if (generation === this.generation) { this.connected = false; this.mute(true); this.render(); } }

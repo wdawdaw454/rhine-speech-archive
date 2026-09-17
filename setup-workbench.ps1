@@ -45,33 +45,6 @@ Invoke-Step '安装后端依赖（首次约数 GB，含 PyTorch）' {
     if ($LASTEXITCODE -ne 0) { throw '依赖安装失败' }
 }
 
-Invoke-Step '下载轻量模型（FSMN-VAD / CAM++）' {
-    & $venvPython (Join-Path $backend 'scripts\prepare_target_models.py')
-    if ($LASTEXITCODE -ne 0) { throw '模型下载失败' }
-}
-
-$int8Bundle = Join-Path $backend 'models\sensevoice_small_int8_bundle'
-$onnxBundle = Join-Path $backend 'models\sensevoice_small_onnx_bundle'
-if (!(Test-Path -LiteralPath (Join-Path $int8Bundle 'model.onnx'))) {
-    $snapshot = ''
-    Invoke-Step '下载 SenseVoiceSmall（约 900 MB）' {
-        $script:snapshot = (& $venvPython -c "from modelscope import snapshot_download; print(snapshot_download('iic/SenseVoiceSmall'))" | Select-Object -Last 1).Trim()
-        if ($LASTEXITCODE -ne 0) { throw 'SenseVoiceSmall 下载失败' }
-    }
-    if (!(Test-Path -LiteralPath (Join-Path $onnxBundle 'model.onnx'))) {
-        Invoke-Step '导出 SenseVoice ONNX' {
-            & $venvPython (Join-Path $backend 'scripts\export_sensevoice_onnx.py') --source-model-dir $snapshot --output-dir $onnxBundle
-            if ($LASTEXITCODE -ne 0) { throw 'ONNX 导出失败' }
-        }
-    }
-    Invoke-Step '生成 INT8 量化模型（约 230 MB）' {
-        & $venvPython (Join-Path $backend 'scripts\quantize_sensevoice_onnx.py') --bundle-dir $onnxBundle --output-dir $int8Bundle
-        if ($LASTEXITCODE -ne 0) { throw 'INT8 量化失败' }
-    }
-} else {
-    Write-Host '==> SenseVoice INT8 模型已就绪，跳过导出'
-}
-
 $dist = Join-Path $root 'RhineLabUI\dist\index.html'
 if (!(Test-Path -LiteralPath $dist)) {
     $node = Get-Command node.exe -ErrorAction SilentlyContinue
@@ -92,4 +65,4 @@ if (!(Test-Path -LiteralPath $dist)) {
 
 Write-Host ''
 Write-Host '初始化完成。双击「启动莱茵语音工作台.cmd」即可启动。' -ForegroundColor Green
-Write-Host '可选模型（Fun-ASR-Nano / Qwen3-ASR / MOSS / 样品-X）请参考 docs/USAGE.md 按需安装。'
+Write-Host '首次使用可在网页的「模型管理」档案中按需安装模型；样品-X模型资产需按 sample-x/README.md 手动准备。'

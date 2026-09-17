@@ -1,0 +1,42 @@
+.model-manager { font-size: 15px; color: var(--speech-ink, #080a08); }
+.model-manager [hidden] { display: none !important; }
+.model-manager-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; border-bottom: 1px solid var(--speech-line, #aaa59a); padding-bottom: 14px; }
+.model-manager-kicker { display: block; font-size: 12px; letter-spacing: 1px; color: var(--speech-muted, #77756d); margin-bottom: 7px; }
+.model-manager-head p { margin: 0; max-width: 620px; line-height: 1.7; color: var(--speech-muted, #77756d); }
+.model-refresh { min-height: 38px; border-bottom: 1px solid var(--speech-line, #aaa59a); white-space: nowrap; }
+.model-message { margin: 12px 0 16px; font-size: 14px; color: var(--speech-muted, #77756d); }
+.model-message[data-connected="false"] { color: #b16a46; }
+.model-list { display: grid; gap: 14px; }
+.model-card { border: 1px solid var(--speech-line, #aaa59a); background: color-mix(in srgb, var(--theme-field, #e7e3d9) 72%, transparent); padding: 15px 16px; }
+.model-card[data-installed="false"] { border-style: dashed; background: transparent; }
+.model-card header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: start; }
+.model-card h3 { margin: 0 0 7px; font-size: 17px; font-weight: 600; }
+.model-card header p { margin: 0; color: var(--speech-muted, #77756d); line-height: 1.65; }
+.model-state { min-width: 66px; text-align: center; padding: 5px 8px; border: 1px solid currentColor; font-size: 12px; color: #61755c; }
+.model-card[data-installed="false"] .model-state { color: #a05a3c; }
+.model-card dl { margin: 14px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
+.model-card dt { font-size: 11px; letter-spacing: .08em; color: var(--speech-muted, #77756d); margin-bottom: 5px; }
+.model-card dd { margin: 0; min-width: 0; font-size: 14px; line-height: 1.6; }
+.model-card dd span { display: inline-block; margin: 0 8px 6px 0; padding-bottom: 2px; border-bottom: 1px solid var(--speech-line, #aaa59a); }
+.model-card dd a { display: block; overflow-wrap: anywhere; }
+.model-card dd small { display: block; color: var(--speech-muted, #77756d); margin-top: 3px; }
+.model-card code { display: block; font-size: 12px; overflow-wrap: anywhere; color: var(--speech-muted, #77756d); }
+.model-manual { margin: 12px 0 0; font-size: 13px; line-height: 1.7; color: #82603f; }
+.model-card footer { display: flex; justify-content: flex-end; gap: 18px; border-top: 1px solid var(--speech-line, #aaa59a); margin-top: 15px; padding-top: 12px; }
+.model-install, .model-uninstall { min-height: 38px; }
+.model-uninstall { color: #a05a3c; border-bottom: 1px solid currentColor; }
+.model-bundled { align-self: center; font-size: 13px; color: #61755c; }
+.model-manager button:disabled, .model-manager a.manual { opacity: .75; }
+.model-manager button:disabled { opacity: .45; cursor: not-allowed; }
+.model-operation { border-top: 1px solid var(--speech-line, #aaa59a); margin-top: 16px; }
+.model-operation summary { display: flex; justify-content: space-between; gap: 16px; min-height: 42px; align-items: center; cursor: pointer; }
+.model-operation summary span:last-child { color: var(--speech-muted, #77756d); text-align: right; }
+.model-operation pre { max-height: 190px; overflow: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.6; }
+.model-manager :is(button, a, summary):focus-visible { outline: 2px solid var(--theme-accent, #9b7247); outline-offset: 3px; }
+.model-manager button:not(:disabled):hover, .model-manager a:hover { color: var(--theme-accent, #9b7247); }
+
+[data-layout="portrait"] .model-manager-head, [data-layout="compact"] .model-manager-head { flex-direction: column; }
+[data-layout="portrait"] .model-card dl, [data-layout="compact"] .model-card dl { grid-template-columns: 1fr; }
+[data-layout="portrait"] .model-card footer, [data-layout="compact"] .model-card footer { flex-direction: column; align-items: stretch; gap: 8px; }
+[data-layout="portrait"] .model-card header, [data-layout="compact"] .model-card header { grid-template-columns: 1fr; }
+[data-layout="portrait"] .model-state, [data-layout="compact"] .model-state { justify-self: start; }

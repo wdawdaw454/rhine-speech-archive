@@ -16,6 +16,7 @@ import time
 from typing import Any, Callable, Iterable
 from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
+from .model_manager import ModelManager
 from .samplex_service import SampleXService
 
 import numpy as np
@@ -473,6 +474,34 @@ class DictationController:
         self.stop()
         self.wait()
         self._release_backends()
+
+    def release_models(self):
+        """Unload resident engines before model files are changed."""
+        with self._lock:
+            if self._state in BUSY_STATES:
+                raise RuntimeError("请先结束当前识别任务")
+            self._state = "loading"
+            self._message = "正在释放本地模型"
+            self._touch()
+        self.stop()
+        self.wait()
+        self._release_backends()
+        with self._lock:
+            self._target_models = None
+            self._loaded_model_id = None
+            self._state = "idle"
+            self._message = "模型已释放，可在模型管理中安装或卸载"
+            self._touch()
+
+    def refresh_model_availability(self):
+        with self._lock:
+            current = self._models.get(self._model_id)
+            if (not current or not current.public_dict()["available"]):
+                self._model_id = next(
+                    (model.id for model in self._models.values() if model.public_dict()["available"]),
+                    "",
+                )
+            self._touch()
 
     def _build_stream(self, stop_event: Event) -> MicrophoneStream:
         return MicrophoneStream(
@@ -1012,6 +1041,12 @@ def microphone_name() -> str:
 def make_handler(controller: DictationController, web_root: Path, rhine_root: Path | None = None) -> type[BaseHTTPRequestHandler]:
     root = web_root.resolve()
     samplex = SampleXService(root.parent.parent.parent, controller)
+    model_manager = ModelManager(
+        project_root=root.parent.parent,
+        controller=controller,
+        external_busy=samplex.occupied,
+        external_lock=samplex.lock,
+    )
     speech_root = rhine_root.resolve() if rhine_root is not None else None
 
     class DictationHandler(BaseHTTPRequestHandler):
@@ -1073,6 +1108,8 @@ def make_handler(controller: DictationController, web_root: Path, rhine_root: Pa
                 self._json(samplex.status())
             elif path == "/api/models":
                 self._json({"models": controller.model_list()})
+            elif path == "/api/model-manager":
+                self._json(model_manager.status())
             elif path == "/api/device":
                 source = parse_qs(urlparse(self.path).query).get("source", ["microphone"])[0]
                 self._json(system_audio_device() if source == "system" else {"name": microphone_name(), "available": True})
@@ -1113,6 +1150,9 @@ def make_handler(controller: DictationController, web_root: Path, rhine_root: Pa
         def _post(self) -> None:
             origin = self.headers.get("Origin")
             if origin and origin != f"http://{self.headers.get('Host')}":
+                length = min(int(self.headers.get("Content-Length", "0")), 65536)
+                if length:
+                    self.rfile.read(length)
                 self._json({"error": "不允许跨站控制本地麦克风"}, HTTPStatus.FORBIDDEN)
                 return
             path = urlparse(self.path).path
@@ -1127,6 +1167,14 @@ def make_handler(controller: DictationController, web_root: Path, rhine_root: Pa
                     return
                 if samplex.occupied():
                     raise RuntimeError('样品-X档案正在识别，请先结束并定稿')
+                if path == "/api/model-manager/install":
+                    model_manager.install(str(self._body().get("id", "")))
+                    self._json(model_manager.status(), HTTPStatus.ACCEPTED)
+                    return
+                if path == "/api/model-manager/uninstall":
+                    model_manager.uninstall(str(self._body().get("id", "")))
+                    self._json(model_manager.status(), HTTPStatus.ACCEPTED)
+                    return
                 if path == '/api/sample-x/load':
                     self._body()
                     samplex.port = self.server.server_port

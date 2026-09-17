@@ -67,6 +67,18 @@ def test_rhine_frontend_is_same_origin_and_confined(tmp_path):
         response = connection.getresponse()
         assert response.status == 200
         response.read()
+        connection.request('GET', '/api/model-manager')
+        response = connection.getresponse()
+        assert response.status == 200
+        registry = json.load(response)
+        assert registry["operation"] is None
+        assert registry["models"]
+        connection.request('POST', '/api/model-manager/install', json.dumps({'id': 'unknown'}),
+                           {'Content-Type': 'application/json'})
+        response = connection.getresponse()
+        assert response.status == 400
+        assert '未知模型' in json.load(response)['error']
+        response.read()
     finally:
         connection.close()
         server.shutdown()
