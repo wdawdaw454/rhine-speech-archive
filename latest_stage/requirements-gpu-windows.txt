@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Shared ITN used by the streaming backends. PyTorch is intentionally omitted:
+# setup_windows_gpu_models.bat reuses the existing CUDA environment.
+cn2an==0.5.24

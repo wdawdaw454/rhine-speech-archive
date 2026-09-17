@@ -1,0 +1,101 @@
+# Python 运行产物
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# 虚拟环境
+.venv*/
+latest_stage/.venv-moss/
+
+# Node
+node_modules/
+
+# 模型权重：体积大，且再分发需逐一核对上游许可
+latest_stage/models/
+sample-x/runtime/portable-models/
+sample-x/runtime/decoded/
+sample-x/runtime/cuda-graphs/
+
+# 用户数据与运行输出（含录音、识别结果与声纹）
+latest_stage/outputs/
+latest_stage/data/raw/
+latest_stage/data/processed/
+latest_stage/data/mixtures/
+latest_stage/data/experiments/
+latest_stage/data/enroll/
+latest_stage/data/
+latest_stage/Funasr_tests/
+latest_stage/profiles/
+sample-x/runs/
+sample-x/benchmarks/
+sample-x/logs/
+sample-x/gpu-test/
+
+# 本地工作区与临时目录
+.codex-temp/
+.patchbase/
+.remote_original/
+.tmp_qwen3_asr/
+remote_stage/
+latest_stage/.cache/
+sample-x/.pip-cache/
+
+# 历史归档与本机专用工具，不随公开仓库分发
+sample-x/legacy-qwen3-asr-20260918/
+sample-x/archive-qwen-source.ps1
+sample-x/GPU-ACCURACY-EVALUATION.md
+sample-x/CUDA-INTEGRATION.md
+sample-x/backend-verification.json
+sample-x/backend-switch-verification.json
+sample-x/verification.json
+
+# 内部验证记录与代理说明，不属于运行所需代码
+RhineLabUI/verification/*
+!RhineLabUI/verification/boot-lettering/
+RhineLabUI/verification/boot-lettering/*
+!RhineLabUI/verification/boot-lettering/webfont-sources.json
+RhineLabUI/AGENTS.md
+RhineLabUI/scripts/check-startup-2d-host.mjs
+RhineLabUI/scripts/check-wallpaper-image-host.mjs
+
+# 本机性能/验收诊断脚本，不属于开箱运行所需代码
+sample-x/benchmark_gpu_short.py
+sample-x/benchmark_long.py
+sample-x/compare_long.py
+sample-x/evaluate_accuracy.py
+sample-x/cuda_benchmark.py
+sample-x/cuda_decoder_probe.py
+sample-x/cuda_live_probe.py
+sample-x/gpu_runtime_probe.py
+sample-x/check_reference_segmentation.py
+sample-x/stitch.py
+sample-x/test_streaming.py
+sample-x/verify_backend_runtime.py
+sample-x/verify_backend_switch.py
+sample-x/verify_cuda_decoder.py
+sample-x/verify_integration.py
+
+# 历史开发文档与大体积演示媒体；公开 README 仅使用 archive.jpg
+latest_stage/docs/
+latest_stage/README.md
+latest_stage/run_windows_dictation_demo.bat
+latest_stage/run_windows_dictation_ui.bat
+latest_stage/setup_windows_gpu_models.bat
+RhineLabUI/art/
+RhineLabUI/reference/
+RhineLabUI/wallpaper/
+RhineLabUI/本地运行说明.md
+RhineLabUI/语音工作台说明.md
+RhineLabUI/docs/*
+!RhineLabUI/docs/media/
+RhineLabUI/docs/media/*
+!RhineLabUI/docs/media/archive.jpg
+
+# 日志与杂项
+*.log
+*.pid
+.DS_Store
+Thumbs.db

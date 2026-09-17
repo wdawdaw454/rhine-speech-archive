@@ -1,0 +1,4 @@
+# Separate .venv-moss only: do not install into the existing FunASR environment.
+transformers==5.6.2
+numpy==1.26.4
+moss-transcribe-diarize @ git+https://github.com/OpenMOSS/MOSS-Transcribe-Diarize.git@61bc29cd4120be7b5d3b761b64cd5dff57263642

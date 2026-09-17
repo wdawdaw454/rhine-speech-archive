@@ -1,0 +1,19 @@
+version: 1
+target_speaker: S0724
+interferer_speaker: S0764
+num_utterances: 4
+sample_rate: 16000
+seeds: [42, 43]
+scenarios:
+  - name: alternate_snr20
+    gap: 1.0
+    overlap: 0.0
+    target_snr_db: 20.0
+  - name: alternate_snr8
+    gap: 1.0
+    overlap: 0.0
+    target_snr_db: 8.0
+  - name: overlap02_snr8
+    gap: 1.0
+    overlap: 0.2
+    target_snr_db: 8.0

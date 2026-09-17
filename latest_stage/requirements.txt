@@ -1,0 +1,24 @@
+# Runtime
+# FunASR 1.4.x currently requires NumPy 1.x.
+numpy>=1.26,<2
+soundfile>=0.12
+soxr>=0.3.1
+PyYAML>=6.0
+pydantic>=2.6
+tqdm>=4.66
+editdistance>=0.8.1
+zhconv>=1.4.3
+
+# Heavy / external models
+funasr>=1.4.13
+modelscope>=1.39
+onnxruntime>=1.18
+onnx>=1.16,<2
+
+# Dev / test
+pytest>=8.0
+pytest-cov>=4.1
+mypy>=1.8
+black>=24.0
+sounddevice>=0.4.6; platform_system == "Windows"
+PyAudioWPatch==0.2.12.8; platform_system == "Windows"

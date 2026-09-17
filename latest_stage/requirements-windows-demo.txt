@@ -1,0 +1,8 @@
+# Lightweight Windows microphone demo requirements
+numpy>=2.0
+onnxruntime>=1.18
+sounddevice>=0.4.6; platform_system == "Windows"
+PyAudioWPatch==0.2.12.8; platform_system == "Windows"
+soxr>=0.3.1
+soundfile>=0.12
+zhconv>=1.4.3

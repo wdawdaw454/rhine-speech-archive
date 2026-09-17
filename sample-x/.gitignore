@@ -1,0 +1,11 @@
+.venv/
+.venv-cuda/
+.pip-cache/
+__pycache__/
+*.pyc
+logs/
+runs/
+benchmarks/
+gpu-test/
+runtime/portable-models/
+runtime/decoded/

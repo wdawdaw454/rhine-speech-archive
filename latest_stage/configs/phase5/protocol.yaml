@@ -1,0 +1,106 @@
+version: 1
+phase: "5.0"
+objective:
+  task: "target-speaker streaming Mandarin ASR"
+  domain: "general Chinese"
+  final_runtime: "Windows local microphone application"
+  tuning_runtime: "remote A100 80GB"
+  final_input: "near-field mono 16kHz microphone stream"
+  not_goal: "multi-tenant A100 capacity service"
+
+device_profiles:
+  tuning:
+    name: "a100-80gb"
+    role: "model fine-tuning, augmentation, offline evaluation"
+    device: "cuda:1"
+    max_memory_gb: 80
+    concurrency_optimization: false
+  local_high:
+    name: "windows-local-discrete-gpu"
+    role: "primary deployment validation"
+    os: "windows"
+    input: "local microphone"
+    target_memory_gb: [8, 12]
+    target_compute_rtf: 0.8
+  local_low:
+    name: "windows-local-low-power"
+    role: "compatibility validation only"
+    os: "windows"
+    input: "local microphone"
+    target_memory_gb: [4, 6]
+    target_compute_rtf: 0.95
+  cpu_fallback:
+    name: "windows-cpu"
+    role: "smoke and degraded mode"
+    os: "windows"
+    input: "local microphone"
+    target_compute_rtf: null
+
+data_policy:
+  corpus: "AISHELL-1"
+  archive: "data/raw/aishell/data_aishell.tgz"
+  reserved_pilot_speakers: ["S0002", "S0003", "S0724", "S0764"]
+  reserved_full_dev_speakers:
+    ["S0509", "S0073", "S0162", "S0702", "S0141", "S0742", "S0233", "S0191"]
+  reserved_full_test_speakers:
+    ["S0113", "S0176", "S0210", "S0208", "S0040", "S0763", "S0251", "S0017"]
+  calibration_split: "data/processed/aishell_full/dev"
+  heldout_split: "data/processed/aishell_full/test"
+  rules:
+    - "All reserved dev/test speakers are forbidden in tuning data."
+    - "Threshold, VAD, embedding-window, and ASR hyperparameters are selected on dev only."
+    - "Held-out test is evaluated once per completed model family."
+    - "Enrollment utterances remain separate from tuning and evaluation utterances."
+    - "No test output may be inspected before the final model decision is frozen."
+
+speaker_plan:
+  selection_seed: "phase5-v1"
+  debug_train_count: 32
+  tiers:
+    debug: "smallest deterministic speaker set for pipeline verification"
+    full: "all archive speakers not reserved by earlier baselines"
+  overlap_allowed: false
+
+# Model-specific experiment groups retired with their ASR implementation.
+# Preserve the independent data/speaker planning policy below.
+experiment_groups: {}
+
+augmentation_stages:
+  a_clean:
+    description: "single-speaker AISHELL utterances only"
+    enabled: true
+  b_speaker_mix:
+    description: "two-speaker mixtures with deterministic SNR and overlap"
+    enabled: true
+  c_speed_perturbation:
+    description: "0.9, 1.0, and 1.1 speed factors"
+    enabled: true
+  d_noise:
+    description: "additive noise after MUSAN or equivalent corpus is added"
+    enabled: false
+  e_reverberation:
+    description: "RIR convolution after RIR corpus is added"
+    enabled: false
+
+quality_constraints:
+  primary: "target_cer on speaker-disjoint dev mixtures"
+  gates:
+    non_target_leakage_max: 0.01
+    recall_min: 0.98
+    precision_min: 0.98
+  decision_split: "dev"
+  final_split: "test"
+
+deployment_constraints:
+  local_microphone:
+    sample_rate_hz: 16000
+    channels: 1
+    chunk_seconds: 0.2
+    report_local_audio_jitter: true
+    report_network_jitter: false
+  latency_budget:
+    first_partial_p95_seconds: 1.5
+    caption_commit_p95_seconds: 2.5
+  compute_budget:
+    local_compute_rtf_max: 0.8
+    queue_or_wait_time_metric: "not applicable to single local stream"

@@ -1,0 +1,67 @@
+# Phase 1 default configuration. Relative model paths are resolved against
+# configs/, so ../models points to the project-local model cache.
+project:
+  sample_rate: 16000
+  mono: true
+  seed: 42
+  device: auto
+
+audio:
+  chunk_size: 0.20
+  min_duration: 0.10
+  max_duration: 3600.0
+  realtime_sleep: false
+
+vad:
+  model_id: "iic/speech_fsmn_vad_zh-cn-16k-common-pytorch"
+  model_dir: "../models/vad"
+  threshold: 0.5
+  min_silence_duration: 0.45
+  max_segment_length: 20.0
+  merge_gap: 0.30
+  speech_pad: 0.20
+  chunk_size: 0.20
+
+speaker:
+  model_id: "iic/speech_campplus_sv_zh-cn_16k-common"
+  model_dir: "../models/speaker"
+  min_segment_duration: 0.60
+  embedding_window: 1.50
+  embedding_hop: 0.50
+  first_embedding_window: 0.90
+  accept_threshold: null
+  reject_threshold: null
+  calibration_target_far: 0.01
+  embedding_norm: l2
+  emit_unconfirmed_partials: true
+
+asr:
+  backend: sensevoice_onnx
+  model_id: "iic/SenseVoiceSmall"
+  model_dir: "../models/sensevoice_small_int8_bundle"
+  chunk_size: 0.60
+  hotwords_file: null
+  min_avg_confidence: null
+
+postprocess:
+  punctuation:
+    enabled: true
+    model_id: "iic/punc_ct-transformer_cn-en-common-vocab471067-large"
+    model_dir: "../models/punc"
+  remove_fillers: false
+  normalize_width: true
+  normalize_number: true
+
+output:
+  run_dir: "outputs/runs"
+  save_jsonl: true
+  save_transcript: true
+  save_audio_debug: false
+
+evaluation:
+  cer_normalization:
+    lowercase: true
+    remove_punctuation: true
+    remove_whitespace: true
+    to_simplified_chinese: true
+    normalize_numbers: true

@@ -1,0 +1,19 @@
+[project]
+name = "asr-voiceprint"
+version = "0.1.0"
+description = "Target-speaker streaming ASR (Phase 1 MVP)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+pythonpath = ["src"]
+
+[tool.black]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true

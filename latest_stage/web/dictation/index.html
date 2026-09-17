@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="本地多模型麦克风、电脑音频与 WAV 转写" />
+    <title>本地语音转写</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">LOCAL DICTATION</p>
+          <h1>本地语音转写</h1>
+        </div>
+        <div class="connection" id="connection" aria-live="polite">
+          <span class="connection-dot"></span>
+          <span>正在连接</span>
+        </div>
+      </header>
+
+      <section class="control-strip" aria-label="识别设置">
+        <label class="model-field">
+          <span>功能分类</span>
+          <select id="mode-select" aria-label="功能分类">
+            <option value="streaming">实时</option>
+            <option value="offline">非实时</option>
+          </select>
+          <small id="mode-description">实时显示增量文本，停顿后确认结果。</small>
+        </label>
+        <label class="model-field" id="recognition-type-field">
+          <span>识别类型</span>
+          <select id="recognition-type" aria-label="识别类型">
+            <option value="normal">普通识别</option>
+            <option value="target">目标说话人识别</option>
+          </select>
+          <small>先选择识别类型，再选择模型。</small>
+        </label>
+        <label class="model-field">
+          <span>识别模型</span>
+          <select id="model-select" aria-label="识别模型"></select>
+          <small id="model-description"></small>
+        </label>
+        <div class="model-load">
+          <button class="secondary-button" id="load-model-button" type="button">加载模型</button>
+          <small id="model-ready" aria-live="polite">当前模型未加载</small>
+        </div>
+        <div class="device-chip">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" />
+          </svg>
+          <span id="device-name">默认麦克风</span>
+        </div>
+      </section>
+
+      <section class="input-strip" aria-label="音频输入">
+        <label class="source-field">输入来源
+          <select id="source-select" aria-label="输入来源">
+            <option value="microphone">麦克风录音</option>
+            <option value="system">电脑音频</option>
+            <option value="wav">单个 WAV 文件</option>
+          </select>
+        </label>
+        <label id="wav-field" class="wav-field" hidden>选择 WAV 文件
+          <input id="wav-file" type="file" accept=".wav,audio/wav,audio/x-wav" aria-label="选择 WAV 文件" />
+        </label>
+        <p class="capture-hint" id="capture-hint">先加载模型，再开始录音。使用本机默认麦克风，每次最多 120 秒。</p>
+      </section>
+
+      <details class="speaker-card" id="speaker-panel" hidden open>
+        <summary>目标说话人 · 注册与过滤 <span id="speaker-summary">未注册</span></summary>
+        <p class="capture-hint" id="target-mode-hint">FSMN-VAD + CAM++ 验证目标声音，再由所选 ASR 转写。适合轮流讲话，不分离重叠声音；短于 0.6 秒的片段可能跳过。</p>
+        <p class="capture-hint" id="enroll-source-hint" aria-live="polite">录音注册使用上方“输入来源”所选的设备，最多 30 秒。</p>
+        <div class="speaker-controls">
+          <button id="target-load" class="secondary-button" type="button">加载声纹组件</button>
+          <label>目标名称 <input id="speaker-name" maxlength="40" placeholder="例如：主讲人" aria-label="目标名称" /></label>
+          <button id="enroll-mic" class="secondary-button" type="button">录音注册</button>
+          <label class="wav-field">注册 WAV <input id="enroll-file" type="file" accept=".wav,audio/wav" aria-label="注册 WAV" /></label>
+          <button id="enroll-upload" class="secondary-button" type="button">上传注册</button>
+          <button id="speaker-forget" class="secondary-button" type="button">删除声纹</button>
+        </div>
+        <p class="capture-hint">仅注册你有权使用的声音。建议安静环境单人说话 10–20 秒，允许 3–30 秒。重新注册会替换原声纹；注册原音频不保存，只在本机保存声纹特征。</p>
+        <div class="speaker-controls">
+          <span class="capture-hint">已启用目标说话人过滤</span>
+          <label>匹配阈值 <input id="speaker-threshold" type="number" min="0.10" max="0.95" step="0.05" value="0.45" aria-label="匹配阈值" /></label>
+          <small>越高越严格，可能漏字；0.45 为待校准初始值。</small>
+        </div>
+        <p class="capture-hint">目标模式只过滤文字；会话回放保存完整输入音频，可能包含其他人的声音。误接收／漏识别仍可能发生，不用于身份认证。</p>
+      </details>
+      <p class="capture-hint" id="speaker-live" aria-live="polite" hidden></p>
+      <p class="capture-hint" id="nano-hint" hidden>Fun-ASR-Nano 准实时：先积累约 1.2 秒语音，预览约每 1.2 秒更新；FSMN-VAD 约 600ms 静音判句尾。预留首段出字约 1.5–2.5 秒、短句定稿约 1.5–3 秒（含采集、推理与页面轮询的预算，非保证）。长段最多约 8 秒分段；灰色文字可能修订。停止输入后请等待定稿。</p>
+      <p class="capture-hint meeting-hint" id="meeting-hint" hidden>MOSS 多人会议转写：无需注册声纹，也不筛选目标。上传 WAV 或停止录音后，整段生成说话人编号、时间戳和文字。S01 / S02 仅为本次录音中的匿名编号，不对应真实姓名；支持重叠讲话但仍可能漏字或分错人。当前本机版：WAV 最多 64 MB / 10 分钟，麦克风和电脑音频最多 120 秒；不是原生实时识别。</p>
+
+      <section class="action-bar" aria-label="识别控制">
+        <button class="secondary-button" id="clear-button" type="button">清空文本</button>
+        <button class="primary-button" id="record-button" type="button">
+          <span class="record-icon" aria-hidden="true"></span>
+          <span id="record-label">开始录音</span>
+        </button>
+        <button class="secondary-button" id="copy-button" type="button">复制文本</button>
+      </section>
+
+      <section class="transcript-card" aria-label="转写文本">
+        <div class="transcript-head">
+          <div class="status-block">
+            <div class="status-line">
+              <span class="state-orb" id="state-orb"></span>
+              <span id="state-text">准备就绪</span>
+            </div>
+            <small class="load-timing" id="load-timing"></small>
+            <small class="load-timing" id="realtime-timing" hidden></small>
+          </div>
+          <time id="elapsed">00:00</time>
+        </div>
+        <label class="level-bar">输入音量 <meter id="audio-level" min="0" max="1" value="0" aria-label="输入音量"></meter></label>
+        <div class="transcript" id="transcript" aria-live="polite" aria-atomic="false">
+          <p class="empty-text" id="empty-text">请先点击“加载模型”，加载完成后再开始。</p>
+          <div class="committed-text" id="committed-text"></div>
+          <div class="meeting-segments" id="meeting-segments" hidden></div>
+          <div class="partial-text" id="partial-text"></div>
+        </div>
+        <p class="error-message" id="error-message" role="alert"></p>
+        <div class="recording-panel" id="recording-panel" hidden>
+          <audio id="recording-audio" controls preload="none" aria-label="本次音频回放"></audio>
+          <a id="recording-download" download="recording.wav">下载本次音频（16 kHz WAV）</a>
+          <a id="meeting-json" download="meeting_segments.json" hidden>下载会议分段 JSON</a>
+          <a id="meeting-srt" download="meeting.srt" hidden>下载带说话人字幕 SRT</a>
+        </div>
+      </section>
+
+      <footer>
+        <span>音频仅在本机处理 · 录音与文本保存至本地 outputs</span>
+        <button class="shutdown-button" id="shutdown-button" type="button">关闭本地服务</button>
+      </footer>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

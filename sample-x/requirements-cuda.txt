@@ -1,0 +1,6 @@
+# Isolated CUDA environment; CPU-only .venv remains untouched.
+MNN==3.6.1
+numpy==1.26.4
+kaldi-native-fbank==1.22.3
+aiohttp==3.14.3
+onnxruntime==1.30.0
