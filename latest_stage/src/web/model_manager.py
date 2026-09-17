@@ -266,8 +266,6 @@ class ModelManager:
             models.append({
                 **spec.public_dict(),
                 "installed": installed,
-                "markers": [str(marker) for marker in spec.markers],
-                "install_paths": [str(path) for path in spec.install_paths],
             })
         return {"models": models, "operation": operation}
 

@@ -82,6 +82,7 @@ def test_registry_reports_models_when_cache_is_empty(tmp_path, monkeypatch):
     ]
     assert all(model["installed"] is False for model in status["models"])
     assert status["operation"] is None
+    assert all("markers" not in model and "install_paths" not in model for model in status["models"])
     assert next(model for model in status["models"] if model["id"] == "sample-x")["install_mode"] == "manual"
     assert next(model for model in status["models"] if model["id"] == "silero-vad")["install_mode"] == "bundled"
 

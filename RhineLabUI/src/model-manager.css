@@ -20,7 +20,6 @@
 .model-card dd span { display: inline-block; margin: 0 8px 6px 0; padding-bottom: 2px; border-bottom: 1px solid var(--speech-line, #aaa59a); }
 .model-card dd a { display: block; overflow-wrap: anywhere; }
 .model-card dd small { display: block; color: var(--speech-muted, #77756d); margin-top: 3px; }
-.model-card code { display: block; font-size: 12px; overflow-wrap: anywhere; color: var(--speech-muted, #77756d); }
 .model-manual { margin: 12px 0 0; font-size: 13px; line-height: 1.7; color: #82603f; }
 .model-card footer { display: flex; justify-content: flex-end; gap: 18px; border-top: 1px solid var(--speech-line, #aaa59a); margin-top: 15px; padding-top: 12px; }
 .model-install, .model-uninstall { min-height: 38px; }
@@ -32,6 +31,10 @@
 .model-operation summary { display: flex; justify-content: space-between; gap: 16px; min-height: 42px; align-items: center; cursor: pointer; }
 .model-operation summary span:last-child { color: var(--speech-muted, #77756d); text-align: right; }
 .model-operation pre { max-height: 190px; overflow: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.6; }
+.model-storage { border-top: 1px solid var(--speech-line, #aaa59a); margin-top: 16px; padding-top: 12px; }
+.model-storage h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.model-storage ul { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8; color: var(--speech-muted, #77756d); }
+.model-storage code { font-size: 12px; overflow-wrap: anywhere; }
 .model-manager :is(button, a, summary):focus-visible { outline: 2px solid var(--theme-accent, #9b7247); outline-offset: 3px; }
 .model-manager button:not(:disabled):hover, .model-manager a:hover { color: var(--theme-accent, #9b7247); }
 
