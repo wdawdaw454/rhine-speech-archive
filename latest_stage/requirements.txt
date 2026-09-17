@@ -8,6 +8,7 @@ pydantic>=2.6
 tqdm>=4.66
 editdistance>=0.8.1
 zhconv>=1.4.3
+torch>=2.2,<2.9
 
 # Heavy / external models
 funasr>=1.4.13
