@@ -10,7 +10,7 @@
 | GPU | NVIDIA，可选 | Qwen3-ASR、Fun-ASR-Nano、MOSS、样品-X CUDA 模式受益 |
 | 浏览器 | Chrome / Edge 等现代浏览器 | 需要 WebGL 2；样品-X 档案会请求麦克风或屏幕共享授权 |
 
-磁盘空间参考：SenseVoice ONNX 模型约 230 MB；MOSS 会议模型约 2 GB；Qwen3-ASR 与样品-X 模型资产另计。安装 PyTorch 后虚拟环境体积较大。初始化只安装运行环境，不预下载这些识别模型。
+磁盘空间参考：SenseVoice Small 约 900 MB；MOSS 会议模型约 2 GB；Qwen3-ASR 与样品-X 模型资产另计。安装 PyTorch 后虚拟环境体积较大。初始化只安装运行环境，不预下载这些识别模型。
 
 ## 2. 环境搭建
 
@@ -34,7 +34,7 @@ python -m venv .venv-asr
 
 启动工作台后进入 X-011「模型管理」，页面会显示每个模型关联的功能、安装状态、来源许可、设备与体积要求，并提供安装 / 卸载按钮。
 
-- **SenseVoice 实时引擎**：自动下载 SenseVoiceSmall，导出 ONNX 并生成 INT8 推理包。
+- **SenseVoice Small**：同一份权重用于 X-001 非实时识别、X-005 实时识别和 X-007 目标说话人识别。
 - **FSMN-VAD / CAM++**：目标说话人识别、声纹注册和 Fun-ASR-Nano 实时模式所需的轻量组件。
 - **Fun-ASR-Nano / Qwen3-ASR**：普通识别的可选大模型，按档案需要安装。
 - **MOSS-Transcribe-Diarize**：会议转写模型及独立运行环境。
@@ -53,14 +53,12 @@ python -m venv .venv-asr
 
 模型会下载到仓库顶层 `models/cam-plus/` 与 `models/fsmn-vad/`。
 
-### 4.1 SenseVoice ONNX 模型
+### 4.1 SenseVoice Small 模型
 
-如需手动重建 `models/sensevoice-onnx-int8/`：
+如需手动准备 `models/sensevoice-small/`：
 
 ```powershell
-# 先在 X-011 安装 SenseVoice Small，或手动准备 models/sensevoice-small/
-.venv-asr\Scripts\python scripts\export_sensevoice_onnx.py
-.venv-asr\Scripts\python scripts\quantize_sensevoice_onnx.py
+latest_stage\.venv-asr\Scripts\python latest_stage\scripts\install_modelscope_model.py --model-id iic/SenseVoiceSmall --target models\sensevoice-small
 ```
 
 ### 4.2 可选：MOSS 会议模型

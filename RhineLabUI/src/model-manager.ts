@@ -165,7 +165,9 @@ export class ModelManagerControls {
     this.el('message').dataset.connected = String(this.connected);
 
     const list = this.el('list');
-    if (!list.children.length) {
+    const renderedIds = Array.from(list.children).map(card => (card as HTMLElement).dataset.modelCard);
+    const modelIds = this.models.map(model => model.id);
+    if (renderedIds.join('\n') !== modelIds.join('\n')) {
       list.innerHTML = this.models.map(model => this.card(model)).join('');
     } else {
       this.models.forEach(model => {
@@ -174,7 +176,10 @@ export class ModelManagerControls {
         card.dataset.installed = String(model.installed);
         card.querySelector<HTMLElement>('.model-state')!.textContent = model.installed ? '已安装' : '未安装';
         const install = card.querySelector<HTMLButtonElement>('[data-model-install]');
-        if (install) install.disabled = this.busy();
+        if (install) {
+          install.textContent = this.installLabel(model);
+          install.disabled = this.busy();
+        }
         const uninstall = card.querySelector<HTMLButtonElement>('[data-model-uninstall]');
         if (uninstall) uninstall.disabled = this.busy() || !model.installed;
         this.renderCardProgress(card, model.id);
@@ -221,6 +226,19 @@ export class ModelManagerControls {
         : '正在准备下载…';
   }
 
+  private size(value: number) {
+    if (value < 1024) return `${Math.round(value)} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let size = value / 1024;
+    let unit = units[0];
+    for (const next of units) {
+      unit = next;
+      if (size < 1024 || next === 'GB') break;
+      size /= 1024;
+    }
+    return `${size >= 10 ? size.toFixed(0) : size.toFixed(1)} ${unit}`;
+  }
+
   private renderCardProgress(card: HTMLElement, modelId: string) {
     const operation = this.operation;
     const line = card.querySelector<HTMLElement>('.model-progress-line');
@@ -242,17 +260,8 @@ export class ModelManagerControls {
         : '正在准备下载…';
   }
 
-  private size(value: number) {
-    if (value < 1024) return `${Math.round(value)} B`;
-    const units = ['KB', 'MB', 'GB'];
-    let size = value / 1024;
-    let unit = units[0];
-    for (const next of units) {
-      unit = next;
-      if (size < 1024 || next === 'GB') break;
-      size /= 1024;
-    }
-    return `${size >= 10 ? size.toFixed(0) : size.toFixed(1)} ${unit}`;
+  private installLabel(model: ManagedModel) {
+    return model.installed ? '已安装 · 校验补齐 ↻' : '安装模型 ↓';
   }
 
   private card(model: ManagedModel) {
@@ -261,7 +270,7 @@ export class ModelManagerControls {
       ? `<a class="model-install manual" href="${esc(model.source_url)}" target="_blank" rel="noopener">查看手动准备说明 ↗</a>`
       : model.install_mode === 'bundled'
         ? '<span class="model-bundled">已随仓库内置 ✓</span>'
-        : `<button class="model-install" data-model-install="${esc(model.id)}" ${busy ? 'disabled' : ''}>${model.installed ? '重新校验 / 补齐 ↻' : '安装模型 ↓'}</button>`;
+        : `<button class="model-install" data-model-install="${esc(model.id)}" ${busy ? 'disabled' : ''}>${esc(this.installLabel(model))}</button>`;
     const uninstall = model.install_mode === 'bundled'
       ? ''
       : `<button class="model-uninstall" data-model-uninstall="${esc(model.id)}" ${busy || !model.installed ? 'disabled' : ''}>卸载模型 ✕</button>`;

@@ -13,8 +13,7 @@ test('legacy selector discards retired selection and never offers Paraformer in 
   const elements = {mode: {value: 'streaming'}, model: select('paraformer-zh-streaming'),
     recognitionType: select('normal'), modeDescription: {}};
   const models = [
-    {id: 'sensevoice-realtime', modes: ['streaming']},
-    {id: 'sensevoice-small', modes: ['offline']},
+    {id: 'sensevoice-small', modes: ['streaming', 'offline'], recognition_types: ['normal', 'target']},
     {id: 'fun-asr-nano', modes: ['streaming', 'offline']},
     {id: 'qwen3-asr', modes: ['offline']},
     {id: 'moss-transcribe-diarize', modes: ['offline'], recognition_types: ['meeting']},
@@ -27,8 +26,8 @@ test('legacy selector discards retired selection and never offers Paraformer in 
     source.indexOf('elements.mode.addEventListener(')), context);
   const render = () => vm.runInContext('renderModelOptions()', context);
   render();
-  assert.equal(elements.model.value, 'sensevoice-realtime');
-  assert.deepEqual(elements.model.options.map(option => option.value), ['sensevoice-realtime', 'fun-asr-nano']);
+  assert.equal(elements.model.value, 'sensevoice-small');
+  assert.deepEqual(elements.model.options.map(option => option.value), ['sensevoice-small', 'fun-asr-nano']);
   elements.mode.value = 'offline';
   render();
   assert.deepEqual(elements.model.options.map(option => option.value),
@@ -36,5 +35,5 @@ test('legacy selector discards retired selection and never offers Paraformer in 
   assert.equal(elements.model.value, 'sensevoice-small');
   elements.mode.value = 'streaming';
   render();
-  assert.deepEqual(elements.model.options.map(option => option.value), ['sensevoice-realtime', 'fun-asr-nano']);
+  assert.deepEqual(elements.model.options.map(option => option.value), ['sensevoice-small', 'fun-asr-nano']);
 });

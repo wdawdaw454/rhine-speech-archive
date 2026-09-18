@@ -174,7 +174,7 @@ class Backend:
 
 
 def make_controller(tmp_path, **kwargs):
-    (tmp_path / "model.onnx").write_bytes(b"fake")
+    (tmp_path / "model.pt").write_bytes(b"fake")
     spec = DictationModel("fake", "Fake", tmp_path, "test", modes=("streaming", "offline"),
                          recognition_types=("normal", "target"))
     calls = []

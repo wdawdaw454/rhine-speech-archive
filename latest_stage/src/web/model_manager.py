@@ -88,26 +88,10 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
 
     return [
         ManagedModel(
-            id="sensevoice-realtime",
-            name="SenseVoice 实时引擎",
-            description="从 SenseVoiceSmall 导出 ONNX，并生成 INT8 本地推理包；用于 CPU 实时普通识别与目标说话人识别。",
-            features=("X-005 实时识别", "X-007 目标说话人识别"),
-            source="ModelScope iic/SenseVoiceSmall，本地导出 ONNX INT8",
-            source_url="https://modelscope.cn/models/iic/SenseVoiceSmall",
-            license="FunASR 生态模型",
-            device="CPU",
-            estimated_size="约 230 MB 生成物；构建时另需约 900 MB 源模型缓存",
-            markers=(local("sensevoice-onnx-int8") / "model.onnx",),
-            install_paths=(
-                local("sensevoice-onnx"),
-                local("sensevoice-onnx-int8"),
-            ),
-        ),
-        ManagedModel(
             id="sensevoice-small",
             name="SenseVoice Small",
-            description="非实时中英等多语言识别模型；也是构建实时 ONNX 引擎的源模型。",
-            features=("X-001 非实时识别", "X-005 实时引擎构建依赖"),
+            description="中英等多语言识别模型；同一份权重支持非实时、实时预览和目标说话人识别。",
+            features=("X-001 非实时识别", "X-005 实时识别", "X-007 目标说话人识别"),
             source="ModelScope iic/SenseVoiceSmall",
             source_url="https://modelscope.cn/models/iic/SenseVoiceSmall",
             license="FunASR 生态模型",
@@ -340,29 +324,7 @@ class ModelManager:
                 self._set(operation, state="complete", message=f"{spec.name} 已卸载")
                 return
             self._set(operation, message=f"正在安装 {spec.name}…")
-            if spec.id == "sensevoice-realtime":
-                source = self._install_modelscope(
-                    operation,
-                    "iic/SenseVoiceSmall",
-                    model_directory(self.project_root, "sensevoice-small"),
-                )
-                onnx = model_directory(self.project_root, "sensevoice-onnx")
-                int8 = model_directory(self.project_root, "sensevoice-onnx-int8")
-                if not (onnx / "model.onnx").is_file():
-                    self._command(operation, [
-                        sys.executable,
-                        str(self.project_root / "scripts/export_sensevoice_onnx.py"),
-                        "--source-model-dir", source,
-                        "--output-dir", str(onnx),
-                    ])
-                if not (int8 / "model.onnx").is_file():
-                    self._command(operation, [
-                        sys.executable,
-                        str(self.project_root / "scripts/quantize_sensevoice_onnx.py"),
-                        "--bundle-dir", str(onnx),
-                        "--output-dir", str(int8),
-                    ])
-            elif spec.id == "moss-transcribe-diarize":
+            if spec.id == "moss-transcribe-diarize":
                 self._command(operation, [
                     "powershell",
                     "-NoProfile", "-ExecutionPolicy", "Bypass",

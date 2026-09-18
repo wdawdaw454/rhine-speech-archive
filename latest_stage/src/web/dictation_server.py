@@ -23,7 +23,6 @@ import numpy as np
 
 from ..audio.microphone import MicrophoneStream, write_status_file
 from ..audio.system_audio import SystemAudioStream, system_audio_device
-from ..models.sensevoice_onnx import OnnxSenseVoiceAsr
 from ..models.moss_meeting import (MossMeetingAsr, MeetingCancelled, MODEL_REVISION,
     WEIGHT_FILE, WEIGHT_BYTES, validate_segments, segment_text, segments_srt)
 from ..models.storage import model_directory
@@ -42,9 +41,9 @@ class DictationModel:
     name: str
     model_dir: Path
     description: str
-    backend: str = "onnx"
+    backend: str = "funasr-offline"
     device: str = "cpu"
-    required_file: str = "model.onnx"
+    required_file: str = "model.pt"
     required_bytes: int | None = None
     decode_interval: float | None = None
     modes: tuple[str, ...] = ("streaming",)
@@ -76,18 +75,13 @@ def default_models(project_root: Path) -> list[DictationModel]:
 
     return [
         DictationModel(
-            id="sensevoice-realtime", name="SenseVoice",
-            model_dir=local("sensevoice-onnx-int8"),
-            description="实时更新 · ONNX INT8 / CPU · 分块重识别，非原生流式",
-            required_bytes=241030219, decode_interval=0.80,
-            recognition_types=("normal", "target"),
-        ),
-        DictationModel(
             id="sensevoice-small", name="SenseVoice Small",
             model_dir=local("sensevoice-small"),
-            description="非流式 · 中英等多语言 · 轻量快速，自动清理情感标签",
+            description="非实时整段识别与实时分块重识别 · 中英等多语言 · 预览可修订",
             backend="funasr-offline", device="cuda:0", required_file="model.pt",
-            modes=("offline",),
+            decode_interval=0.80,
+            modes=("streaming", "offline"),
+            recognition_types=("normal", "target"),
         ),
         DictationModel(
             id="fun-asr-nano", name="Fun-ASR-Nano",
@@ -160,6 +154,27 @@ class LocalOfflineAsr:
                                       use_itn=True, itn=True, **options)
         return "\n".join(rich_transcription_postprocess(str(r.get("text", ""))).strip()
                          for r in results if r.get("text"))
+
+
+class SenseVoiceSmallAsr(LocalOfflineAsr):
+    """Use one SenseVoiceSmall checkpoint for offline and prefix realtime decoding."""
+
+    def __init__(self, spec: DictationModel, *, decode_interval: float, sample_rate: int) -> None:
+        super().__init__(spec)
+        self.sample_rate = int(sample_rate)
+        self.decode_interval = float(decode_interval)
+        self.reset()
+
+    def reset(self) -> None:
+        self.buffer = np.empty(0, dtype=np.float32)
+        self.text = ""
+
+    def accept(self, chunk: np.ndarray, *, is_final: bool) -> str:
+        self.buffer = np.concatenate((self.buffer, np.asarray(chunk, dtype=np.float32)))
+        decode_samples = max(1, int(round(self.decode_interval * self.sample_rate)))
+        if is_final or len(self.buffer) >= decode_samples:
+            self.text = self.transcribe(self.buffer)
+        return self.text
 
 
 class PlainTranscriptWriter:
@@ -449,16 +464,13 @@ class DictationController:
 
     def _build_backend(self, model: DictationModel) -> Any:
         decode_interval = model.decode_interval or self.decode_interval
-        if model.backend == "onnx":
-            return OnnxSenseVoiceAsr.from_bundle(
-                model.model_dir,
-                decode_chunk=decode_interval,
-                sample_rate=self.sample_rate,
-                intra_op_threads=self.intra_op_threads,
-                language_id=3,
-                textnorm_id=14,
-            )
         if model.backend == "funasr-offline":
+            if model.id == "sensevoice-small":
+                return SenseVoiceSmallAsr(
+                    model,
+                    decode_interval=decode_interval,
+                    sample_rate=self.sample_rate,
+                )
             return LocalOfflineAsr(model)
         if model.backend == "moss-meeting":
             return MossMeetingAsr(model.model_dir, self.project_root)

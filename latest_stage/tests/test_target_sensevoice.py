@@ -132,8 +132,8 @@ def test_preview_can_be_revised_to_empty():
 
 
 def controller(tmp_path, **kwargs):
-    (tmp_path / "model.onnx").write_bytes(b"fake")
-    model = DictationModel("sensevoice-realtime", "SenseVoice", tmp_path, "test",
+    (tmp_path / "model.pt").write_bytes(b"fake")
+    model = DictationModel("sensevoice-small", "SenseVoice", tmp_path, "test",
         decode_interval=.8, recognition_types=("normal", "target"))
     backend = kwargs.pop("backend", None) or PrefixBackend()
     c = DictationController(project_root=tmp_path, models=[model], backend_factory=lambda _: backend, **kwargs)
@@ -155,7 +155,7 @@ def test_controller_all_inputs_use_prefix_strategy_and_keep_full_recording(tmp_p
         return factory
     c, backend = controller(tmp_path, stream_factory=stream("microphone"), system_stream_factory=stream("system"))
     options = {"file_audio": data, "filename": "sample.wav"} if source == "wav" else {"source": source}
-    c.start("sensevoice-realtime", target_only=True, **options); c.wait(5)
+    c.start("sensevoice-small", target_only=True, **options); c.wait(5)
     s = c.snapshot()
     assert s["state"] == "idle", s
     assert s["source"] == source and s["target_only"]
@@ -177,7 +177,7 @@ def test_stop_flushes_approved_short_tail_without_reopening_input(tmp_path):
         delivered.set()
         assert stop.wait(5)
     c, backend = controller(tmp_path, stream_factory=stream)
-    c.start("sensevoice-realtime", target_only=True)
+    c.start("sensevoice-small", target_only=True)
     assert delivered.wait(5)
     assert not backend.calls
     c.stop(); c.wait(5)
@@ -200,12 +200,12 @@ def test_decode_failure_closes_input_saves_audio_and_allows_clean_retry(tmp_path
         finally: closed.append(True)
     backend = Failure()
     c, _ = controller(tmp_path, backend=backend, stream_factory=stream)
-    c.start("sensevoice-realtime", target_only=True); c.wait(5)
+    c.start("sensevoice-small", target_only=True); c.wait(5)
     assert c.snapshot()["state"] == "error"
     assert "synthetic prefix failure" in c.snapshot()["error"]
     assert c.recording_path().is_file() and closed == [True]
     backend.fail = False
-    c.start("sensevoice-realtime", target_only=True); c.wait(5)
+    c.start("sensevoice-small", target_only=True); c.wait(5)
     assert c.snapshot()["state"] == "idle"
     assert c.snapshot()["committed_text"] == "字数38400"
     assert closed == [True, True]
@@ -221,5 +221,5 @@ def test_empty_partial_event_clears_old_prefix(tmp_path):
 def test_registry_exposes_only_realtime_sensevoice_for_target(tmp_path):
     models = default_models(tmp_path)
     target = [m.public_dict() for m in models if "target" in m.recognition_types]
-    assert [m["target_name"] for m in target] == ["FSMN-VAD + CAM++ + SenseVoice"]
-    assert [m["id"] for m in target] == ["sensevoice-realtime"]
+    assert [m["target_name"] for m in target] == ["FSMN-VAD + CAM++ + SenseVoice Small"]
+    assert [m["id"] for m in target] == ["sensevoice-small"]

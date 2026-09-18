@@ -30,7 +30,6 @@ const activeStates = new Set(['loading', 'starting', 'listening', 'stopping', 't
 const captureStates = new Set(['starting', 'listening', 'stopping', 'enroll_recording']);
 const stamp = (n: number) => `${Math.floor((n || 0) / 60).toString().padStart(2, '0')}:${Math.floor((n || 0) % 60).toString().padStart(2, '0')}`;
 const modelNames: Record<string, string> = {
-  'sensevoice-realtime': 'SenseVoice 实时引擎',
   'sensevoice-small': 'SenseVoice Small',
   'fsmn-vad': 'FSMN-VAD',
   'cam-plus': 'CAM++ 声纹模型',

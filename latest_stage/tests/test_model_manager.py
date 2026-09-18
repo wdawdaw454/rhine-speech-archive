@@ -70,7 +70,6 @@ def test_registry_reports_models_when_cache_is_empty(tmp_path, monkeypatch):
     ).status()
 
     assert [model["id"] for model in status["models"]] == [
-        "sensevoice-realtime",
         "sensevoice-small",
         "fsmn-vad",
         "cam-plus",
@@ -103,6 +102,12 @@ def test_modelscope_markers_use_repository_model_root(tmp_path, monkeypatch):
         "punctuation": ("punctuation", "model.pt"),
     }
     specs = default_managed_models(tmp_path)
+    sensevoice = next(item for item in specs if item.id == "sensevoice-small")
+    assert sensevoice.features == (
+        "X-001 非实时识别",
+        "X-005 实时识别",
+        "X-007 目标说话人识别",
+    )
 
     for model_id, (repository, filename) in expected_files.items():
         spec = next(item for item in specs if item.id == model_id)

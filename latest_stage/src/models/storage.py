@@ -6,8 +6,6 @@ from pathlib import Path
 
 MODEL_DIRECTORIES = {
     "sensevoice-small": "sensevoice-small",
-    "sensevoice-onnx": "sensevoice-onnx",
-    "sensevoice-onnx-int8": "sensevoice-onnx-int8",
     "fsmn-vad": "fsmn-vad",
     "cam-plus": "cam-plus",
     "fun-asr-nano": "fun-asr-nano",

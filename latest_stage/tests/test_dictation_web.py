@@ -6,7 +6,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.web.dictation_server import DictationController, DictationModel, LocalOfflineAsr, decode_wav, default_models, make_handler
+from src.web.dictation_server import (
+    DictationController,
+    DictationModel,
+    LocalOfflineAsr,
+    SenseVoiceSmallAsr,
+    decode_wav,
+    default_models,
+    make_handler,
+)
 
 
 def _load_and_start(controller, model_id, mode="streaming"):
@@ -100,7 +108,7 @@ class FakeStream:
 def _model(tmp_path: Path) -> DictationModel:
     model_dir = tmp_path / "model"
     model_dir.mkdir()
-    (model_dir / "model.onnx").write_bytes(b"fake")
+    (model_dir / "model.pt").write_bytes(b"fake")
     return DictationModel(
         id="fake-model",
         name="Fake Model",
@@ -183,7 +191,7 @@ def test_browser_controller_rejects_unknown_or_missing_model(tmp_path):
     else:
         raise AssertionError("unknown model should be rejected")
 
-    (model.model_dir / "model.onnx").unlink()
+    (model.model_dir / "model.pt").unlink()
     try:
         controller.start(model.id)
     except FileNotFoundError as exc:
@@ -196,25 +204,24 @@ def test_default_registry_contains_local_streaming_and_offline_models(tmp_path):
     models = default_models(tmp_path)
 
     assert [model.id for model in models] == [
-        "sensevoice-realtime",
         "sensevoice-small", "fun-asr-nano", "qwen3-asr", "moss-transcribe-diarize",
     ]
-    assert models[0].backend == "onnx"
-    assert models[0].modes == ("streaming",)
+    assert models[0].backend == "funasr-offline"
+    assert models[0].modes == ("streaming", "offline")
     assert [m.id for m in models if "offline" in m.modes and "normal" in m.recognition_types] == [
         "sensevoice-small", "fun-asr-nano", "qwen3-asr",
     ]
-    assert models[0].device == "cpu"
-    assert models[0].required_file == "model.onnx"
+    assert models[0].device == "cuda:0"
+    assert models[0].required_file == "model.pt"
     assert models[0].decode_interval == 0.80
     assert models[0].recognition_types == ("normal", "target")
-    assert models[0].public_dict()["target_name"] == "FSMN-VAD + CAM++ + SenseVoice"
-    assert models[2].modes == ("streaming", "offline")
-    assert models[2].decode_interval == 1.2
-    assert models[2].recognition_types == ("normal",)
-    assert all(m.modes == ("offline",) for m in (models[1], models[3]))
-    assert all(tmp_path.parent / "models" in m.model_dir.parents for m in models[1:4])
-    assert models[3].model_key == "Qwen/Qwen3-ASR-1.7B"
+    assert models[0].public_dict()["target_name"] == "FSMN-VAD + CAM++ + SenseVoice Small"
+    assert models[1].modes == ("streaming", "offline")
+    assert models[1].decode_interval == 1.2
+    assert models[1].recognition_types == ("normal",)
+    assert all(m.modes == ("offline",) for m in (models[2], models[3]))
+    assert all(tmp_path.parent / "models" in m.model_dir.parents for m in models[:3])
+    assert models[2].model_key == "Qwen/Qwen3-ASR-1.7B"
     assert not any("paraformer" in model.id.lower() for model in models)
     assert models[-1].recognition_types == ("meeting",)
     assert models[-1].modes == ("offline",)
@@ -222,13 +229,28 @@ def test_default_registry_contains_local_streaming_and_offline_models(tmp_path):
     assert all("meeting" not in model.recognition_types for model in models if "streaming" in model.modes)
 
 
+def test_sensevoice_small_checkpoint_supports_prefix_and_offline_paths():
+    asr = SenseVoiceSmallAsr.__new__(SenseVoiceSmallAsr)
+    asr.sample_rate = 16_000
+    asr.decode_interval = 0.50
+    calls: list[int] = []
+    asr.transcribe = lambda audio: calls.append(len(audio)) or f"{len(audio)} samples"  # type: ignore[method-assign]
+    asr.reset()
+
+    chunk = np.zeros(4_000, dtype=np.float32)
+    assert asr.accept(chunk, is_final=False) == ""
+    assert asr.accept(chunk, is_final=False) == "8000 samples"
+    assert asr.accept(chunk[:1], is_final=True) == "8001 samples"
+    assert calls == [8_000, 8_001]
+
+
 @pytest.mark.parametrize("options", [{"target_only": True}, {"recognition_type": "target"}])
 def test_normal_only_model_rejects_target_requests_but_keeps_transcription(tmp_path, options):
     from dataclasses import replace
-    original = default_models(tmp_path)[1]
+    original = default_models(tmp_path)[0]
     marker = _model(tmp_path)
     model = replace(original, model_dir=marker.model_dir, required_file=marker.required_file,
-                    modes=("streaming",))
+                    recognition_types=("normal",))
     controller = DictationController(project_root=tmp_path, models=[model],
         backend_factory=lambda _: FakeBackend(), stream_factory=lambda _: FakeStream())
     controller.load_model(model.id); controller.wait(60)
@@ -385,7 +407,7 @@ def test_controller_keeps_only_one_model_backend_resident(tmp_path):
     first = _model(tmp_path)
     second_dir = tmp_path / "second"
     second_dir.mkdir()
-    (second_dir / "model.onnx").write_bytes(b"fake")
+    (second_dir / "model.pt").write_bytes(b"fake")
     second = DictationModel("second", "Second", second_dir, "test")
     built: list[str] = []
     controller = DictationController(

@@ -89,7 +89,7 @@ class PunctuationConfig(BaseModel):
 
 class AsrConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    backend: Literal["sensevoice_onnx"] = "sensevoice_onnx"
+    backend: Literal["sensevoice_small"] = "sensevoice_small"
     model_id: str
     model_dir: str
     chunk_size: float = 0.60
@@ -146,7 +146,7 @@ class AppConfig(BaseModel):
     asr: AsrConfig = Field(
         default_factory=lambda: AsrConfig(
             model_id="iic/SenseVoiceSmall",
-            model_dir=str(PROJECT_ROOT.parent / "models/sensevoice-onnx-int8"),
+            model_dir=str(PROJECT_ROOT.parent / "models/sensevoice-small"),
         )
     )
     postprocess: PostprocessConfig = Field(

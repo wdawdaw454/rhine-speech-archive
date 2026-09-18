@@ -42,7 +42,7 @@ class Backend:
 
 
 def controller(tmp_path, backend=None, **kwargs):
-    marker = tmp_path / "model.onnx"
+    marker = tmp_path / "model.pt"
     marker.write_bytes(b"test")
     model = DictationModel("moss-test", "MOSS", tmp_path, "test", modes=("offline",),
                           recognition_types=("meeting",))

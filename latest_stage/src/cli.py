@@ -17,12 +17,12 @@ from .audio.stream import FileStream
 from .config import PROJECT_ROOT, load_config
 from .logging_utils import setup_logging
 from .models.backends import (
+    FunasrPrefixAsr,
     FunasrPunctuator,
     FunasrSpeakerEncoder,
     FunasrVad,
 )
 from .models.streaming_vad import FunasrStreamingVad
-from .models.sensevoice_onnx import OnnxSenseVoiceAsr
 from .pipeline.event_io import CompositeEventSink, JsonlEventWriter, TranscriptWriter
 from .pipeline.online_pipeline import OnlineRealtimePipeline
 from .pipeline.realtime_pipeline import RealtimePipeline
@@ -139,10 +139,12 @@ def cmd_run(args: argparse.Namespace) -> None:
     profile = load_profile(args.profile)
     enrolled = profile_embedding(profile)
     speaker_encoder = FunasrSpeakerEncoder(cfg.speaker.model_dir, device=device)
-    asr_backend = OnnxSenseVoiceAsr.from_bundle(
+    asr_backend = FunasrPrefixAsr(
         cfg.asr.model_dir,
         decode_chunk=cfg.asr.chunk_size,
+        device=device,
         sample_rate=sample_rate,
+        use_itn=True,
     )
 
     if args.batch:

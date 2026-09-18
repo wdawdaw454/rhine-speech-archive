@@ -57,7 +57,7 @@ speaker:
   calibration_target_far: 0.01
   embedding_norm: l2
 asr:
-  backend: sensevoice_onnx
+  backend: sensevoice_small
   model_id: x
   model_dir: models/sensevoice_small_int8_bundle
   chunk_size: 0.6

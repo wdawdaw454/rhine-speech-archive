@@ -37,9 +37,9 @@ speaker:
   emit_unconfirmed_partials: true
 
 asr:
-  backend: sensevoice_onnx
+  backend: sensevoice_small
   model_id: "iic/SenseVoiceSmall"
-  model_dir: "../../models/sensevoice-onnx-int8"
+  model_dir: "../../models/sensevoice-small"
   chunk_size: 0.60
   hotwords_file: null
   min_avg_confidence: null

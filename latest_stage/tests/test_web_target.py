@@ -15,7 +15,7 @@ from src.web.dictation_server import DictationController, DictationModel
 def _model(tmp_path):
     model_dir = tmp_path / "model"
     model_dir.mkdir()
-    (model_dir / "model.onnx").write_bytes(b"fake")
+    (model_dir / "model.pt").write_bytes(b"fake")
     return DictationModel(id="fake", name="fake", description="test", model_dir=model_dir,
                           recognition_types=("normal", "target"))
 

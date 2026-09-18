@@ -6,7 +6,7 @@
 
 | 名称 | 来源 | 本项目用途 | 许可证 / 说明 |
 | --- | --- | --- | --- |
-| SenseVoice Small | [FunASR / ModelScope `iic/SenseVoiceSmall`](https://modelscope.cn/models/iic/SenseVoiceSmall) | X-001、X-005 实时与非实时普通识别；导出为 ONNX INT8 推理 | FunASR 生态模型 |
+| SenseVoice Small | [FunASR / ModelScope `iic/SenseVoiceSmall`](https://modelscope.cn/models/iic/SenseVoiceSmall) | X-001、X-005、X-007 的实时、非实时与目标说话人识别 | FunASR 生态模型 |
 | Fun-ASR-Nano | [FunAudioLLM `FunAudioLLM/Fun-ASR-Nano-2512`](https://modelscope.cn/models/FunAudioLLM/Fun-ASR-Nano-2512) | X-002、X-006 中英日及中文方言识别 | 下载到项目 `models/` 目录 |
 | Qwen3-ASR 1.7B | [Qwen `Qwen/Qwen3-ASR-1.7B`](https://modelscope.cn/models/Qwen/Qwen3-ASR-1.7B) | X-003 非实时多语言识别 | 通义千问 ASR 模型 |
 | FSMN-VAD | [ModelScope `iic/speech_fsmn_vad_zh-cn-16k-common-pytorch`](https://modelscope.cn/models/iic/speech_fsmn_vad_zh-cn-16k-common-pytorch) | 语音活动检测，服务于实时分段与声纹窗口 | FunASR 生态模型 |
@@ -35,9 +35,8 @@
 | --- | --- | --- |
 | [FunASR](https://github.com/modelscope/FunASR) | 语音识别框架与模型加载 | MIT |
 | [ModelScope](https://github.com/modelscope/modelscope) | 模型下载 | Apache-2.0 |
+| [kaldi-native-fbank](https://github.com/csukuangfj/kaldi-native-fbank) | FunASR 音频特征提取后端 | Apache-2.0 |
 | [NumPy](https://github.com/numpy/numpy) | 音频矩阵计算 | BSD-3-Clause |
-| [ONNX Runtime](https://github.com/microsoft/onnxruntime) | SenseVoice ONNX 推理 | MIT |
-| [ONNX](https://github.com/onnx/onnx) | 模型导出与量化 | Apache-2.0 |
 | [PyTorch](https://github.com/pytorch/pytorch) | Fun-ASR-Nano、Qwen3-ASR、MOSS 推理 | BSD-3-Clause |
 | [Transformers](https://github.com/huggingface/transformers) | MOSS 会议模型 | Apache-2.0 |
 | [MNN](https://github.com/alibaba/MNN) | 样品-X CPU 编码 | Apache-2.0 |

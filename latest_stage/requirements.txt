@@ -12,9 +12,8 @@ torch>=2.2,<2.9
 
 # Heavy / external models
 funasr>=1.4.13
+kaldi-native-fbank>=1.18.7
 modelscope>=1.39
-onnxruntime>=1.18
-onnx>=1.16,<2
 
 # Dev / test
 pytest>=8.0

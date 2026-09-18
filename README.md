@@ -8,7 +8,7 @@
 
 | 档案 | 功能 | 引擎 / 模型 | 适用输入 |
 | --- | --- | --- | --- |
-| X-001 | 非实时普通识别 | SenseVoice Small（ONNX INT8 / CPU） | 麦克风、电脑音频、WAV |
+| X-001 | 非实时普通识别 | SenseVoice Small（PyTorch / GPU 优先） | 麦克风、电脑音频、WAV |
 | X-002 | 非实时普通识别 | Fun-ASR-Nano（PyTorch / GPU 优先） | 麦克风、电脑音频、WAV |
 | X-003 | 非实时普通识别 | Qwen3-ASR 1.7B（多语言，显存要求较高） | 麦克风、电脑音频、WAV |
 | X-005 | 实时普通识别 | SenseVoice Small（约 0.8 秒分块重识别） | 麦克风、电脑音频、WAV |
@@ -80,9 +80,9 @@ powershell -ExecutionPolicy Bypass -File .\setup-workbench.ps1
 ## 技术栈
 
 - **前端**：TypeScript、Three.js、Vite；界面与三维模型来自 [RhineLabUI](https://github.com/LBEILC/RhineLabUI)。
-- **后端**：Python 标准库 `http.server`、NumPy、FunASR、ONNX Runtime、ModelScope、soundfile、soxr、PyAudioWPatch。
+- **后端**：Python 标准库 `http.server`、NumPy、FunASR、kaldi-native-fbank、ModelScope、soundfile、soxr、PyAudioWPatch。
 - **模型**：SenseVoice Small、Fun-ASR-Nano、Qwen3-ASR 1.7B、FSMN-VAD、CAM++、MOSS-Transcribe-Diarize、Silero VAD、样品-X Sample-X。
-- **推理设备**：优先 CUDA，不可用时自动回退 CPU；SenseVoice ONNX INT8 与声纹组件使用 CPU。
+- **推理设备**：优先 CUDA，不可用时自动回退 CPU；FSMN-VAD 与 CAM++ 使用 CPU。
 
 ## 隐私边界
 
