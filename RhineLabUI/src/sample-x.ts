@@ -7,6 +7,7 @@ type Run = {
   replayStarted?: number;
 };
 type Runtime = { backend?: string; backend_id?: string; device?: string; fallback_reason?: string };
+interface ManagedModel { id: string; name: string; installed: boolean }
 type Health = Runtime & { ready: boolean; loading: boolean; busy: boolean; message?: string };
 const service = 'http://127.0.0.1:8877';
 
@@ -50,7 +51,10 @@ export class SampleXArchiveControls {
   private reading = false;
   private loading = false;
   private opened = false;
-  constructor(private mute: (muted: boolean) => void, private notify: (message: string) => void) {
+  private modelInstalled = true;
+  private modelStatusChecked = false;
+  private modelStatusRefreshedAt = 0;
+  constructor(private mute: (muted: boolean) => void, private notify: (message: string) => void, private manageModels: () => void) {
     this.root.id = 'sample-x-archive'; this.root.className = 'speech-archive';
     this.root.setAttribute('aria-label', '样品-X A 原前端流程');
     this.root.innerHTML = `
@@ -70,7 +74,8 @@ export class SampleXArchiveControls {
         <div id="sample-x-file-field" hidden><label class="speech-file"><span>选择 WAV 文件 ↗</span><input id="sample-x-file" type="file" accept=".wav,audio/wav" aria-label="选择样品-X WAV 文件"/><small id="sample-x-file-name">未选择文件 · 最大 100 MB</small></label><button id="sample-x-sample" class="speech-secondary">使用示例录音 ↗</button></div>
         <p id="sample-x-capture-note" class="speech-note"></p>
         <p id="sample-x-runtime" class="speech-note">Sample-X_v3.2.1 · 后端尚未加载</p>
-        <button id="sample-x-load" class="speech-secondary">加载样品-X引擎 ↗</button>
+        <p id="sample-x-model-note" class="speech-note"></p>
+        <div class="speech-engine-actions"><button id="sample-x-open-models" class="speech-secondary" hidden>前往模型管理 ↗</button><button id="sample-x-load" class="speech-secondary">加载样品-X引擎 ↗</button></div>
       </section>
       <section id="sample-x-results" role="tabpanel" aria-labelledby="sample-x-tab-results" hidden>
         <p id="sample-x-meter" class="speech-note">本档案尚未开始转写</p>
@@ -100,6 +105,7 @@ export class SampleXArchiveControls {
     });
     this.el('source').addEventListener('change', () => this.render());
     this.el('load').addEventListener('click', () => void this.load());
+    this.el('open-models').addEventListener('click', () => this.manageModels());
     this.el('start').addEventListener('click', () => this.active ? this.stop(this.active) : void this.begin());
     this.el('file').addEventListener('change', () => void this.file());
     this.el('sample').addEventListener('click', () => void this.file(true));
@@ -148,9 +154,19 @@ export class SampleXArchiveControls {
     try {
       const [health, other] = await Promise.all([this.request<Health>('/api/sample-x/status'), this.request<{ state: string }>('/api/status')]);
       this.health = health; this.otherBusy = ['loading', 'starting', 'listening', 'stopping', 'transcribing', 'enrolling', 'enroll_recording'].includes(other.state); this.connected = true;
-      if (!this.active && !this.text()) this.message(health.message || (health.ready ? '样品-X引擎已就绪' : '请先加载样品-X引擎'));
+      await this.refreshModelStatus();
+      if (!this.active && !this.text()) this.message(health.message || (health.ready ? '样品-X引擎已就绪' : this.modelStatusChecked && !this.modelInstalled ? '样品-X模型尚未准备完成' : '请先加载样品-X引擎'));
     } catch { this.connected = false; }
     this.render(); setTimeout(() => void this.poll(), 1200);
+  }
+  private async refreshModelStatus() {
+    if (this.health.ready || Date.now() - this.modelStatusRefreshedAt < 5000) return;
+    this.modelStatusRefreshedAt = Date.now();
+    try {
+      const status = await this.request<{ models: ManagedModel[] }>('/api/model-manager');
+      const model = status.models.find(item => item.id === 'sample-x');
+      if (model) { this.modelInstalled = model.installed; this.modelStatusChecked = true; }
+    } catch { /* Engine status remains useful when the manager API is briefly unavailable. */ }
   }
   private render() {
     const source = this.value('source'), running = !!this.active, blocked = running || this.reading;
@@ -166,6 +182,11 @@ export class SampleXArchiveControls {
     const backend = this.health.backend_id === 'cuda-hybrid' ? 'CUDA + CPU' : this.health.backend_id === 'cpu' ? 'CPU' : '待确认';
     this.el('connection').textContent = !this.connected ? '本地后端未连接 · 请使用启动入口' : this.health.ready ? `LOCAL ${backend} / 样品-X A · 已连接` : 'LOCAL / 样品-X A · 尚未就绪';
     this.el('runtime').textContent = `Sample-X_v3.2.1 · ${this.health.backend || '后端尚未加载'}${this.health.device ? ' · ' + this.health.device : ''}`;
+    const modelMissing = this.modelStatusChecked && !this.modelInstalled && !this.health.ready;
+    this.el('model-note').textContent = modelMissing
+      ? '样品-X模型尚未准备完成。请先在 X-011「模型管理」查看手动准备说明。'
+      : '';
+    this.el<HTMLButtonElement>('open-models').hidden = !modelMissing;
     this.el('fallback').hidden = !this.health.fallback_reason;
     this.el('fallback').textContent = this.health.fallback_reason ? `已回退 CPU · ${this.health.fallback_reason}` : '';
     for (const id of ['copy', 'export']) this.el<HTMLButtonElement>(id).disabled = !this.text();

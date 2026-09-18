@@ -20,6 +20,10 @@
 .speech-archive :is(button, input, select, a, summary):focus-visible { outline: 2px solid var(--theme-accent, #9b7247); outline-offset: 3px; }
 .speech-detail .speech-note { font-size: 14px; color: var(--speech-muted); line-height: 1.7; margin: 10px 0; overflow-wrap: anywhere; }
 .speech-secondary { min-height: 42px; border-bottom: 1px solid var(--speech-line); padding: 8px 0; font-size: 14px; text-align: left; }
+.speech-model-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.speech-model-note span { flex: 1 1 260px; }
+.speech-model-note button { flex: 0 0 auto; min-height: 36px; border-bottom: 1px solid var(--speech-line); font-size: 14px; }
+.speech-engine-actions { display: flex; flex-direction: column; gap: 8px; }
 .speech-primary { display: flex; justify-content: space-between; width: 100%; background: var(--speech-ink); color: var(--speech-paper); padding: 14px 20px; margin: 18px 0 10px; min-height: 50px; font-size: 16px; text-align: left; }
 .speech-primary.is-recording { background: #985936; color: #fff; }
 .speech-archive button:disabled { opacity: .45; cursor: not-allowed; }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { speechArchives, speechColumns } from '../src/speech-catalog.ts';
+import { requiredModelIds, speechArchives, speechColumns } from '../src/speech-catalog.ts';
 import { records, columnFiles, fileLocation, archiveRowPeriod } from '../src/data.ts';
 import { fileAtCell } from '../src/archive-loop.ts';
 
@@ -28,6 +28,12 @@ test('model management remains available before any model is installed', () => {
   const index = speechArchives.findIndex(record => record.id === 'X-011');
   assert.equal(speechArchives[index].feature, 'models');
   assert.equal(fileAtCell({ lane, row: fileLocation(index).row }), index);
+});
+test('engine prompts name every model required by the archive', () => {
+  assert.deepEqual(Object.keys(requiredModelIds), ['X-001', 'X-002', 'X-003', 'X-005', 'X-006', 'X-007', 'X-008', 'X-009']);
+  assert.deepEqual(requiredModelIds['X-006'], ['fun-asr-nano', 'fsmn-vad']);
+  assert.deepEqual(requiredModelIds['X-007'], ['sensevoice-realtime', 'fsmn-vad', 'cam-plus']);
+  assert.deepEqual(requiredModelIds['X-009'], ['fsmn-vad', 'cam-plus']);
 });
 test('voice enrollment shares the target speaker lane and remains an independent archive', () => {
   const lane = speechColumns.indexOf('目标说话人');

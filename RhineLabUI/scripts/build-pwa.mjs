@@ -10,7 +10,7 @@ const files=all.map(path=>path.replaceAll('\\','/')).filter(path=>
   /^audio\/(atmosphere|motif|pulse)\.ogg$/.test(path)
 ).filter(path=>!/^assets\/archive-(cassette|assembly)\.glb$/.test(path)).sort();
 if(!files.some(path=>/^assets\/index-.*\.js$/.test(path)))throw Error('Build the application before generating the offline cache.');
-const worker=await readFile('scripts/pwa-worker.js','utf8');
+const worker=(await readFile('scripts/pwa-worker.js','utf8')).replaceAll('\r\n','\n');
 const hash=createHash('sha256').update(worker);let bytes=0;
 for(const file of files){const content=await readFile(resolve(root,file));hash.update(file).update(content);bytes+=content.length}
 const version=hash.digest('hex').slice(0,16);

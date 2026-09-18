@@ -220,9 +220,15 @@ configureAudio();
 const speechControls = new SpeechArchiveControls(muted => { speechCapturing = muted; configureAudio(); }, notify, () => {
   select(speechArchives.findIndex(record => record.feature === 'voice'));
   openFile();
+}, () => {
+  select(speechArchives.findIndex(record => record.id === 'X-011'));
+  openFile();
 });
 const reviewEntry = reviewParams.has("scene") || reviewParams.has("time") || reviewParams.get("review") === "1";
-const sampleXControls = new SampleXArchiveControls(muted => { sampleXCapturing = muted; configureAudio(); }, notify);
+const sampleXControls = new SampleXArchiveControls(muted => { sampleXCapturing = muted; configureAudio(); }, notify, () => {
+  select(speechArchives.findIndex(record => record.id === 'X-011'));
+  openFile();
+});
 const modelManagerControls = new ModelManagerControls(notify);
 let started = false;
 const loading = $("#loading");

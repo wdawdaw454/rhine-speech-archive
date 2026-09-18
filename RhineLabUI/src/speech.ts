@@ -1,10 +1,11 @@
 import { escapeHtml as esc } from './html';
 import './speech.css';
-import { speechArchives } from './speech-catalog';
+import { requiredModelIds, speechArchives } from './speech-catalog';
 
 type Feature = 'live' | 'record' | 'target' | 'meeting' | 'voice' | 'models';
 type Source = 'microphone' | 'system' | 'wav';
 interface Model { id: string; name: string; description: string; device: string; available: boolean; modes: string[]; recognition_types: string[] }
+interface ManagedModel { id: string; name: string; installed: boolean }
 interface Status {
   external_busy?: boolean;
   state: string; message: string; error: string | null; model_id: string; loaded_model_id: string | null;
@@ -28,6 +29,15 @@ export const features: Record<Feature, { title: string; code: string; mode: stri
 const activeStates = new Set(['loading', 'starting', 'listening', 'stopping', 'transcribing', 'enrolling', 'enroll_recording']);
 const captureStates = new Set(['starting', 'listening', 'stopping', 'enroll_recording']);
 const stamp = (n: number) => `${Math.floor((n || 0) / 60).toString().padStart(2, '0')}:${Math.floor((n || 0) % 60).toString().padStart(2, '0')}`;
+const modelNames: Record<string, string> = {
+  'sensevoice-realtime': 'SenseVoice 实时引擎',
+  'sensevoice-small': 'SenseVoice Small',
+  'fsmn-vad': 'FSMN-VAD',
+  'cam-plus': 'CAM++ 声纹模型',
+  'fun-asr-nano': 'Fun-ASR-Nano',
+  'qwen3-asr': 'Qwen3-ASR 1.7B',
+  'moss-transcribe-diarize': 'MOSS-Transcribe-Diarize',
+};
 
 export class SpeechArchiveControls {
   readonly root = document.createElement('section');
@@ -37,6 +47,7 @@ export class SpeechArchiveControls {
   private results = new Map<string, Status>();
   private panel = 'controls';
   private models: Model[] = [];
+  private managedModels: ManagedModel[] = [];
   private status?: Status;
   private connected = false;
   private pending = false;
@@ -47,7 +58,8 @@ export class SpeechArchiveControls {
   private recordingUrl = '';
   private deviceRequest = 0;
   private modelsRefreshedAt = 0;
-  constructor(private mute: (muted: boolean) => void, private notify: (message: string) => void, private manageVoice: () => void) {
+  private managedModelsRefreshedAt = 0;
+  constructor(private mute: (muted: boolean) => void, private notify: (message: string) => void, private manageVoice: () => void, private manageModels: () => void) {
     this.root.id = 'speech-archive';
     this.root.className = 'speech-archive';
     this.root.setAttribute('aria-label', '档案功能操作');
@@ -64,7 +76,8 @@ export class SpeechArchiveControls {
         <label class="speech-field"><span>INPUT / 音频来源</span><select id="speech-source"><option value="microphone">麦克风</option><option value="system">电脑音频</option><option value="wav">WAV 文件</option></select></label>
         <p class="speech-note" id="speech-device">默认麦克风</p>
         <label class="speech-file" id="speech-file-field" hidden><span>选择 WAV 文件 ↗</span><input id="speech-file" type="file" accept=".wav,audio/wav" aria-label="选择 WAV 文件"/><small id="speech-file-name"></small></label>
-        <section id="speech-engine"><select id="speech-model" aria-label="档案绑定引擎" hidden></select><p class="speech-note" id="speech-model-note"></p><button class="speech-secondary" id="speech-load">加载引擎 ↗</button></section>
+        <p class="speech-note speech-model-note" id="speech-model-note"><span id="speech-model-note-text">正在检查本档案所需模型…</span><button id="speech-open-models" hidden>前往模型管理 ↗</button></p>
+        <section id="speech-engine"><select id="speech-model" aria-label="档案绑定引擎" hidden></select><button class="speech-secondary" id="speech-load">加载引擎 ↗</button></section>
         <section id="speech-target" hidden><div class="speech-profile"><span>VOICEPRINT / 当前声纹</span><strong id="speech-profile">未注册</strong><button id="speech-manage">打开声纹管理档案 ↗</button></div><button class="speech-secondary" id="speech-target-load">加载声纹组件 ↗</button><label class="speech-field" id="speech-threshold-field"><span>匹配阈值</span><input id="speech-threshold" type="number" min="0.10" max="0.95" step="0.01" value="0.45"/></label><p class="speech-note" id="speech-target-note">阈值越高越严格。短语音可能跳过，不分离重叠声音；相似度不是概率。</p></section>
         <section id="speech-enrollment" hidden><label class="speech-field"><span>声纹名称</span><input id="speech-name" maxlength="40" value="主讲人" autocomplete="off"/></label><p class="speech-note">录音注册最多 30 秒，停止后提取声纹。WAV 注册使用上方文件。</p><button class="speech-danger" id="speech-forget">删除已保存声纹</button></section>
       </section>
@@ -97,6 +110,7 @@ export class SpeechArchiveControls {
       this.render();
     });
     this.el('load').addEventListener('click', () => void this.act('/api/load-model', { model_id: this.value('model'), mode: features[this.feature].mode }));
+    this.el('open-models').addEventListener('click', () => this.manageModels());
     this.el('target-load').addEventListener('click', () => void this.act('/api/target/load'));
     this.el('start').addEventListener('click', () => void this.start());
     this.el('manage').addEventListener('click', () => this.manageVoice());
@@ -121,6 +135,8 @@ export class SpeechArchiveControls {
   private el<T extends HTMLElement = HTMLElement>(id: string) { return this.root.querySelector<T>(`#speech-${id}`)!; }
   private value(id: string) { return this.el<HTMLInputElement | HTMLSelectElement>(id).value; }
   private file() { return this.el<HTMLInputElement>('file').files?.[0]; }
+  private requiredModels() { return requiredModelIds[this.archiveId] || []; }
+  private requiredModelName(id: string) { return this.managedModels.find(model => model.id === id)?.name || modelNames[id] || id; }
   private busy() { return !!this.status && (activeStates.has(this.status.state) || !!this.status.external_busy); }
   private key(feature = this.feature, model = this.fixedModel) { return `${features[feature].mode}/${features[feature].type}/${model}`; }
   private result() { return this.results.get(this.key()); }
@@ -228,9 +244,14 @@ export class SpeechArchiveControls {
     if (!this.pending && !this.polling) {
       this.polling = true; const generation = this.generation;
       try {
-        if (!this.models.length || Date.now() - this.modelsRefreshedAt > 5000) {
-          this.models = (await this.request<{ models: Model[] }>('/api/models')).models;
-          this.modelsRefreshedAt = Date.now(); this.options();
+        if (!this.models.length || !this.managedModels.length || Date.now() - this.modelsRefreshedAt > 5000) {
+          const [engineStatus, managerStatus] = await Promise.all([
+            this.request<{ models: Model[] }>('/api/models'),
+            this.request<{ models: ManagedModel[] }>('/api/model-manager'),
+          ]);
+          this.models = engineStatus.models;
+          this.managedModels = managerStatus.models;
+          this.modelsRefreshedAt = this.managedModelsRefreshedAt = Date.now(); this.options();
         }
         const status = await this.request<Status>('/api/status');
         if (generation === this.generation) { this.connected = true; this.accept(status); }
@@ -245,6 +266,15 @@ export class SpeechArchiveControls {
     const busy = this.busy(), blocked = this.pending || busy || !this.connected;
     const isVoice = this.feature === 'voice', target = isVoice || this.feature === 'target';
     const model = this.models.find(m => m.id === this.value('model'));
+    const missingModels = this.requiredModels().filter(id => {
+      const engine = this.models.find(item => item.id === id);
+      if (engine) return !engine.available;
+      const managed = this.managedModels.find(item => item.id === id);
+      return Boolean(managed && !managed.installed);
+    });
+    const missingModelNames = missingModels.map(id => this.requiredModelName(id));
+    const modelNoteText = this.el('model-note-text');
+    const openModels = this.el<HTMLButtonElement>('open-models');
     const ready = !!model?.available && model.id === s?.loaded_model_id;
     if (this.ownsSession() && s && captureStates.has(s.state)) this.el<HTMLSelectElement>('source').value = s.source;
     this.el('title').textContent = f.title; this.el('code').textContent = f.code;
@@ -263,7 +293,19 @@ export class SpeechArchiveControls {
     for (const id of ['source', 'model', 'file', 'threshold', 'name']) this.el<HTMLInputElement>(id).disabled = blocked;
     this.el<HTMLButtonElement>('load').disabled = blocked || ready || !model?.available;
     this.el('load').textContent = s?.state === 'loading' ? '正在加载…' : ready ? '引擎已就绪 ✓' : '加载引擎 ↗';
-    this.el('model-note').textContent = model ? `${model.description} · ${model.device === 'cpu' ? 'CPU' : 'GPU'}` : '没有可用引擎';
+    if (missingModels.length) {
+      modelNoteText.textContent = `所需模型未安装：${missingModelNames.join('、')}。请先在 X-011「模型管理」安装。`;
+      openModels.hidden = false;
+    } else {
+      openModels.hidden = true;
+      modelNoteText.textContent = model
+        ? `${model.description} · ${model.device === 'cpu' ? 'CPU' : 'GPU'}`
+        : isVoice
+          ? '声纹组件使用 FSMN-VAD + CAM++ · CPU'
+          : this.models.length && this.managedModels.length
+            ? '本档案模型已就绪'
+            : '正在检查本档案所需模型…';
+    }
     this.el('profile').textContent = s?.speaker_profile ? `${s.speaker_profile.name} · ${s.speaker_profile.speech_seconds}s 有效语音` : '尚未注册';
     this.el<HTMLButtonElement>('target-load').disabled = blocked || !!s?.target_ready;
     this.el('target-load').textContent = s?.target_ready ? '声纹组件已就绪 ✓' : '加载声纹组件 ↗';
@@ -275,7 +317,7 @@ export class SpeechArchiveControls {
     this.el('start').textContent = this.pending ? '正在提交…' : s?.state === 'enroll_recording' ? '停止并注册 →' : stoppable ? (s?.state === 'transcribing' ? '取消会议转写 ■' : '停止并定稿 ■') : busy ? '处理中…' : isVoice ? (this.value('source') === 'wav' ? '上传 WAV 注册 →' : '开始录音注册 →') : this.value('source') === 'wav' ? '开始文件转写 →' : this.value('source') === 'system' ? '开始采集电脑音频 →' : '开始录音 →';
     this.el('start').classList.toggle('is-recording', !!stoppable);
     if (!s) return;
-    this.el('state').textContent = !this.connected ? '连接中断，恢复连接后同步。' : busy && !this.ownsSession() && s.state !== 'loading' ? '另一档案正在执行：' + s.message : !busy && !this.ownsSession() ? (isVoice ? (/声纹|注册/.test(s.message) ? s.message : s.target_ready ? '声纹组件已就绪' : '请加载声纹组件') : ready ? '本档案引擎已就绪' : '请先加载本档案引擎') : s.message;
+    this.el('state').textContent = !this.connected ? '连接中断，恢复连接后同步。' : busy && !this.ownsSession() && s.state !== 'loading' ? '另一档案正在执行：' + s.message : !busy && !this.ownsSession() ? (missingModels.length ? '请先在 X-011 安装所需模型' : isVoice ? (/声纹|注册/.test(s.message) ? s.message : s.target_ready ? '声纹组件已就绪' : '请加载声纹组件') : ready ? '本档案引擎已就绪' : '请先加载本档案引擎') : s.message;
     this.el('time').textContent = stamp(this.ownsSession() ? s.recording_seconds : r?.recording_seconds || 0);
     if (s.external_busy) this.el('state').textContent = '样品-X档案正在识别，请先在 X-010 结束并定稿';
     this.el<HTMLMeterElement>('level').value = s.audio_level || 0;

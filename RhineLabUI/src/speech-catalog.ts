@@ -10,8 +10,18 @@ const entries: { id: string; title: string; en: string; category: string; featur
   { id: 'X-008', title: '会议转写 · MOSS', en: 'MOSS TRANSCRIBE', category: '多人会议', feature: 'meeting', model: 'moss-transcribe-diarize', abstract: '整段联合生成转写文字、说话人编号和时间戳。完成后可导出 JSON 与 SRT。', findings: ['使用 MOSS-Transcribe-Diarize 0.9B / GPU。说话人编号不代表真实身份。', '可取消会议推理；取消后需重新加载引擎。重叠讲话不保证识别无误。'] },
   { id: 'X-009', title: '声纹注册与管理', en: 'VOICE ENROLLMENT', category: '目标说话人', feature: 'voice', model: '', abstract: '通过麦克风、电脑音频或 WAV 注册 3–30 秒单人语音。声纹只保存在本机。', findings: ['重新注册将替换已有声纹，需要确认。', '注册仅提取声纹，不生成转写文本；不要混入其他人的声音。'] },
   { id: 'X-010', title: '实时识别 · 样品-X', en: 'SAMPLE-X / ORIGINAL A', category: '实时普通识别', feature: 'live', model: 'sample-x', abstract: '样品-X Sample-X 本地模型 + A 原前端流程。CUDA 优先、CPU 回退；浏览器采集、自动断句、草稿与定稿。', findings: ['CUDA FP32 解码 + MNN CPU 编码，Sample-X_v3.2.1；实际后端见功能面板。', '保留完整长段及 CPU 回退，并非原厂流式解码；支持麦克风、电脑音频与 WAV。'] },
-  { id: 'X-011', title: '模型管理', en: 'MODEL REGISTRY', category: '模型管理', feature: 'models', model: '', abstract: '集中查看、安装和卸载本工作台涉及的本地模型。没有模型时也能打开本页，可先启动再按需下载。', findings: ['显示模型关联功能、安装状态、来源许可、本机位置和操作日志。', '卸载只删除声明的模型文件或专用运行环境，不删除声纹和转写结果。'] },
+  { id: 'X-011', title: '模型管理', en: 'MODEL REGISTRY', category: '模型管理', feature: 'models', model: '', abstract: '集中查看、安装和卸载本工作台涉及的本地模型。没有模型时也能打开本页，可先启动再按需下载。', findings: ['显示模型关联功能、安装状态、来源许可和操作日志。', '卸载只删除声明的模型文件或专用运行环境，不删除声纹和转写结果。'] },
 ];
+export const requiredModelIds: Record<string, readonly string[]> = {
+  'X-001': ['sensevoice-small'],
+  'X-002': ['fun-asr-nano'],
+  'X-003': ['qwen3-asr'],
+  'X-005': ['sensevoice-realtime'],
+  'X-006': ['fun-asr-nano', 'fsmn-vad'],
+  'X-007': ['sensevoice-realtime', 'fsmn-vad', 'cam-plus'],
+  'X-008': ['moss-transcribe-diarize'],
+  'X-009': ['fsmn-vad', 'cam-plus'],
+};
 export const speechColumns = ['实时普通识别', '目标说话人', '非实时普通识别', '多人会议', '模型管理'];
 export const speechArchives = entries.map(item => ({
   ...item, department: item.feature === 'models' ? 'MODEL REGISTRY' : item.model || 'FSMN-VAD + CAM++', date: '本地运行', lead: item.model === 'sample-x' ? 'AUTO' : item.feature === 'models' ? 'LOCAL' : item.feature === 'voice' || item.model === 'sensevoice-realtime' ? 'CPU' : 'GPU',

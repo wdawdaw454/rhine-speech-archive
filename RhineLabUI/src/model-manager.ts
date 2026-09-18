@@ -65,11 +65,7 @@ export class ModelManagerControls {
       </details>
       <aside class="model-storage" aria-label="模型存放说明">
         <h3>模型存放说明</h3>
-        <ul>
-          <li>所有模型权重统一保存在仓库顶层的 <code>models\\</code>，并按模型名称分目录。</li>
-          <li>在线安装会直接下载到该目录，不再使用当前用户目录中的 ModelScope 缓存。</li>
-          <li>独立运行环境不是模型：MOSS 环境在 <code>latest_stage\\.venv-moss\\</code>，样品-X环境在 <code>sample-x\\.venv*\\</code>。</li>
-        </ul>
+        <p>模型统一保存在仓库顶层 <code>models\\</code>。</p>
       </aside>`;
     this.root.querySelector('#model-manager-refresh')!.addEventListener('click', () => void this.refresh());
     this.root.addEventListener('click', event => {
