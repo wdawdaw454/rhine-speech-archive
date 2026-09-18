@@ -23,12 +23,12 @@ def main():
     parser.add_argument("--model", choices=["sensevoice-realtime"], default="sensevoice-realtime")
     parser.add_argument("--serve", action="store_true", help="Keep an isolated UI on a random local port for manual QA")
     args = parser.parse_args()
-    examples = Path.home() / ".cache/modelscope/models/iic--speech_campplus_sv_zh-cn_16k-common/snapshots/master/examples"
+    examples = ROOT.parent / "models/cam-plus/examples"
     def audio(name): return decode_wav((examples / name).read_bytes())
     with tempfile.TemporaryDirectory(prefix="target-smoke-") as directory:
         models = [replace(m, device="cpu") for m in default_models(ROOT) if "target" in m.recognition_types]
         model = next(m for m in models if m.id == args.model)
-        c = DictationController(project_root=Path(directory), models=models,
+        c = DictationController(project_root=ROOT, models=models,
             stream_factory=lambda _: (_ for _ in ()).throw(AssertionError("microphone opened")))
         c.load_target(); c.wait(120)
         assert c.snapshot()["target_ready"], c.snapshot()

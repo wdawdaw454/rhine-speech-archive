@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     from huggingface_hub import HfApi, hf_hub_url
     import requests
-    directory = ROOT / "models/moss_transcribe_diarize"
+    directory = ROOT.parent / "models/moss-transcribe-diarize"
     directory.mkdir(parents=True, exist_ok=True)
     info = HfApi().model_info(MODEL_ID, revision=REVISION, files_metadata=True)
     # Some proxies omit Hub HEAD metadata. GET the pinned files and verify

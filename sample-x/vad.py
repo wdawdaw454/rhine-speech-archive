@@ -9,7 +9,7 @@ class VoiceProbability:
         options=ort.SessionOptions()
         options.intra_op_num_threads=1
         options.inter_op_num_threads=1
-        self.model=ort.InferenceSession(str(Path(__file__).with_name('silero_vad.onnx')),
+        self.model=ort.InferenceSession(str(Path(__file__).resolve().parents[1] / 'models/silero-vad/silero_vad.onnx'),
                                        sess_options=options,providers=['CPUExecutionProvider'])
         self.state=np.zeros((2,1,128),np.float32)
         self.context=np.zeros((1,64),np.float32)

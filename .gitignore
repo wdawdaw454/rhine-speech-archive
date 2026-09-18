@@ -14,6 +14,7 @@ latest_stage/.venv-moss/
 node_modules/
 
 # 模型权重：体积大，且再分发需逐一核对上游许可
+/models/
 latest_stage/models/
 sample-x/runtime/portable-models/
 sample-x/runtime/decoded/

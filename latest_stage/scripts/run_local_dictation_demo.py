@@ -70,7 +70,8 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--microphone", action="store_true", help="read the default microphone")
     parser.add_argument("--reference", default=DEFAULT_REFERENCE)
     parser.add_argument(
-        "--model-dir", type=Path, default=PROJECT_ROOT / "models/sensevoice_small_int8_bundle"
+        "--model-dir", type=Path,
+        default=PROJECT_ROOT.parent / "models/sensevoice-onnx-int8"
     )
     parser.add_argument(
         "--backend",

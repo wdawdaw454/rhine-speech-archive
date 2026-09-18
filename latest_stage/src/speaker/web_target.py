@@ -6,6 +6,7 @@ import numpy as np
 
 from ..models.backends import FunasrSpeakerEncoder
 from ..models.streaming_vad import FunasrStreamingVad
+from ..models.storage import model_storage_root
 from .enrollment import SpeakerProfile
 from .verification import enroll_embedding
 
@@ -14,10 +15,10 @@ MODEL_ID = "iic/speech_campplus_sv_zh-cn_16k-common"
 
 
 class TargetModels:
-    def __init__(self):
-        cache = Path.home() / ".cache/modelscope/models"
-        spk = cache / "iic--speech_campplus_sv_zh-cn_16k-common/snapshots/master"
-        vad = cache / "iic--speech_fsmn_vad_zh-cn-16k-common-pytorch/snapshots/master"
+    def __init__(self, model_root: Path | None = None):
+        root = model_root or model_storage_root(Path(__file__).resolve().parents[2])
+        spk = root / "cam-plus"
+        vad = root / "fsmn-vad"
         if not (spk / "campplus_cn_common.bin").is_file() or not (vad / "model.pt").is_file():
             raise FileNotFoundError("缺少 CAM++ / FSMN-VAD 本地模型，请先运行 scripts/prepare_target_models.py")
         self.encoder = FunasrSpeakerEncoder(spk, device="cpu")

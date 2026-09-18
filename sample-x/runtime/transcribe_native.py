@@ -14,7 +14,7 @@ import tempfile
 import time
 import wave
 
-from native_runtime import ROOT, Session, Tokenizer, embedding_table, np
+from native_runtime import MODEL_ROOT, Session, Tokenizer, embedding_table, np
 import kaldi_native_fbank as knf
 
 MODEL_SHA256='3a46e175f322822f368d970580271888383cc571996776754a17af669b48867d'
@@ -30,8 +30,7 @@ def read_audio(source: Path) -> np.ndarray:
     except (wave.Error,ValueError):
         ffmpeg=shutil.which('ffmpeg')
         if not ffmpeg:raise ValueError('Install FFmpeg or supply PCM16 mono 16 kHz WAV')
-        (ROOT/'tmp').mkdir(exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix='llf-native-',dir=ROOT/'tmp') as temp:
+        with tempfile.TemporaryDirectory(prefix='rhine-samplex-') as temp:
             output=Path(temp)/'audio.wav'
             subprocess.run([ffmpeg,'-nostdin','-v','error','-i',str(source),'-ac','1','-ar','16000','-c:a','pcm_s16le',str(output)],check=True,capture_output=True)
             return read(output)
@@ -46,10 +45,10 @@ class NativeRecognizer:
         start=time.perf_counter()
         self.threads=threads;self.max_tokens=max_tokens
         self.embeddings=embedding_table();self.tokenizer=Tokenizer()
-        self.encoder=Session(ROOT/'portable-models/stream/encoder.mnn',threads)
-        self.decoder=Session(ROOT/'portable-models/no_stream/decoder_full.mnn',threads)
-        self.head=Session(ROOT/'portable-models/stream/logit.mnn',threads)
-        self.cmvn=np.loadtxt(ROOT/'decoded/asr/feature_extractor/cmvn.txt').astype(np.float32)
+        self.encoder=Session(MODEL_ROOT/'portable-models/stream/encoder.mnn',threads)
+        self.decoder=Session(MODEL_ROOT/'portable-models/no_stream/decoder_full.mnn',threads)
+        self.head=Session(MODEL_ROOT/'portable-models/stream/logit.mnn',threads)
+        self.cmvn=np.loadtxt(MODEL_ROOT/'decoded/asr/feature_extractor/cmvn.txt').astype(np.float32)
         self.prefix=self.embeddings[self.tokenizer.encode('<audio>')][None]
         self.suffix=self.embeddings[self.tokenizer.encode('</audio>')][None]
         self.load_seconds=time.perf_counter()-start

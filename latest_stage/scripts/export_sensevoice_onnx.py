@@ -23,12 +23,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--source-model-dir",
         type=Path,
-        default=PROJECT_ROOT / "models/sensevoice_small",
+        default=PROJECT_ROOT.parent / "models/sensevoice-small",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=PROJECT_ROOT / "models/sensevoice_small_onnx_bundle",
+        default=PROJECT_ROOT.parent / "models/sensevoice-onnx",
     )
     parser.add_argument("--device", default="cpu", choices=("cpu",))
     parser.add_argument("--opset", type=int, default=14)

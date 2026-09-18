@@ -64,7 +64,7 @@ def main():
     assert request("/api/status")["state"] in {"idle", "error"}, "Server is busy"
     status = load()
     report = {"load_timings": status["load_timings"], "cases": []}
-    examples = Path.home() / ".cache/modelscope/models/iic--speech_campplus_sv_zh-cn_16k-common/snapshots/master/examples"
+    examples = ROOT.parent / "models/cam-plus/examples"
     a = decode_wav((examples / "speaker1_b_cn_16k.wav").read_bytes())
     b = decode_wav((examples / "speaker2_a_cn_16k.wav").read_bytes())
     gap = np.zeros(16000, np.float32)

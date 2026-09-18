@@ -66,11 +66,9 @@ export class ModelManagerControls {
       <aside class="model-storage" aria-label="模型存放说明">
         <h3>模型存放说明</h3>
         <ul>
-          <li><strong>ModelScope 模型</strong>保存在当前用户目录的 <code>%USERPROFILE%\\.cache\\modelscope\\models\\</code>。</li>
-          <li><strong>SenseVoice 实时引擎</strong>的生成包保存在仓库的 <code>latest_stage\\models\\</code>。</li>
-          <li><strong>MOSS 会议模型</strong>和独立环境保存在 <code>latest_stage\\models\\</code> 与 <code>latest_stage\\.venv-moss\\</code>。</li>
-          <li><strong>样品-X</strong>的手动资产和独立环境保存在仓库的 <code>sample-x\\</code> 目录内。</li>
-          <li><strong>Silero VAD</strong>已随仓库内置在 <code>sample-x\\</code> 目录内。</li>
+          <li>所有模型权重统一保存在仓库顶层的 <code>models\\</code>，并按模型名称分目录。</li>
+          <li>在线安装会直接下载到该目录，不再使用当前用户目录中的 ModelScope 缓存。</li>
+          <li>独立运行环境不是模型：MOSS 环境在 <code>latest_stage\\.venv-moss\\</code>，样品-X环境在 <code>sample-x\\.venv*\\</code>。</li>
         </ul>
       </aside>`;
     this.root.querySelector('#model-manager-refresh')!.addEventListener('click', () => void this.refresh());

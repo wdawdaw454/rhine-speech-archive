@@ -60,6 +60,7 @@ powershell -ExecutionPolicy Bypass -File .\setup-workbench.ps1
 ├─ 初始化莱茵语音工作台.cmd # 一键初始化入口
 ├─ 启动莱茵语音工作台.cmd   # 一键启动入口
 ├─ setup-workbench.ps1      # 初始化脚本
+├─ models/                  # 本地模型权重统一存放目录（不随仓库分发）
 ├─ RhineLabUI/              # 三维档案前端
 │  ├─ src/                  # TypeScript 源码
 │  ├─ dist/                 # 前端构建产物，克隆后可直接运行
@@ -71,7 +72,7 @@ powershell -ExecutionPolicy Bypass -File .\setup-workbench.ps1
 │  ├─ scripts/              # 环境与模型准备脚本
 │  └─ tests/                # 后端测试
 └─ sample-x/                # 样品-X 可选推理服务
-   ├─ runtime/              # MNN 推理代码与本地模型资产目录
+   ├─ runtime/              # MNN 推理代码
    ├─ server.py             # 识别服务入口
    └─ pipeline.py           # 分段、VAD 与调度实现
 ```

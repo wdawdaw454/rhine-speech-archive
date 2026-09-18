@@ -5,6 +5,7 @@ import numpy as np
 import MNN
 
 ROOT=Path(__file__).resolve().parent
+MODEL_ROOT=Path(__file__).resolve().parents[2]/'models'/'sample-x'
 if hasattr(sys.stdout,'reconfigure'):sys.stdout.reconfigure(encoding='utf8')
 
 class Session:
@@ -28,9 +29,9 @@ class Session:
         return {k:v.getNumpyData().copy() for k,v in self.model.getSessionOutputAll(self.session).items()}
 
 def embedding_table():
-    cache=ROOT/'portable-models/embedding.npy'
+    cache=MODEL_ROOT/'portable-models/embedding.npy'
     if cache.exists():return np.load(cache,mmap_mode='r')
-    model=Session(ROOT/'portable-models/stream/logit.mnn')
+    model=Session(MODEL_ROOT/'portable-models/stream/logit.mnn')
     zero=model(hidden_state=np.zeros((1,1,768),np.float32))['lm_logits'][0,0]
     table=np.empty((64000,768),np.float32)
     identity=np.eye(768,dtype=np.float32)
@@ -43,7 +44,7 @@ def embedding_table():
 
 class Tokenizer:
     def __init__(self):
-        path=ROOT/'decoded/asr/token'
+        path=MODEL_ROOT/'decoded/asr/token'
         lines=(path/'vocab.txt').read_text(encoding='utf8').splitlines()
         self.vocab={lines[i]:int(lines[i+1]) for i in range(0,len(lines),2)}
         self.inverse={v:k for k,v in self.vocab.items()}

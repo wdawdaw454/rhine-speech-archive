@@ -93,7 +93,7 @@ def main():
               "versions": {p: importlib.metadata.version(p) for p in ("torch", "funasr", "transformers")},
               "python": platform.python_version(), "gpu": torch.cuda.get_device_name(0),
               "cuda": torch.version.cuda, "bf16_supported": torch.cuda.is_bf16_supported()}
-    examples = Path.home() / ".cache/modelscope/models/iic--speech_campplus_sv_zh-cn_16k-common/snapshots/master/examples"
+    examples = ROOT.parent / "models/cam-plus/examples"
     paths = [examples / "speaker1_b_cn_16k.wav", ROOT / "Funasr_tests/data/zh_audio2.wav",
              ROOT / "Funasr_tests/data/zh_audio1.wav"]
     clips = []

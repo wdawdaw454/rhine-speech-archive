@@ -26,6 +26,7 @@ from ..audio.system_audio import SystemAudioStream, system_audio_device
 from ..models.sensevoice_onnx import OnnxSenseVoiceAsr
 from ..models.moss_meeting import (MossMeetingAsr, MeetingCancelled, MODEL_REVISION,
     WEIGHT_FILE, WEIGHT_BYTES, validate_segments, segment_text, segments_srt)
+from ..models.storage import model_directory
 from ..pipeline.event_io import CompositeEventSink, JsonlEventWriter
 from ..pipeline.events import EventType, PipelineEvent
 from ..pipeline.fast_dictation import FastDictationPipeline
@@ -70,42 +71,41 @@ class DictationModel:
 
 def default_models(project_root: Path) -> list[DictationModel]:
     """Central registry used by the UI and future model additions."""
-    cache = Path.home() / ".cache/modelscope/models"
-    def snapshot(name: str) -> Path:
-        return cache / name / "snapshots/master"
+    def local(name: str) -> Path:
+        return model_directory(project_root, name)
 
     return [
         DictationModel(
             id="sensevoice-realtime", name="SenseVoice",
-            model_dir=project_root / "models/sensevoice_small_int8_bundle",
+            model_dir=local("sensevoice-onnx-int8"),
             description="实时更新 · ONNX INT8 / CPU · 分块重识别，非原生流式",
             required_bytes=241030219, decode_interval=0.80,
             recognition_types=("normal", "target"),
         ),
         DictationModel(
             id="sensevoice-small", name="SenseVoice Small",
-            model_dir=snapshot("iic--SenseVoiceSmall"),
+            model_dir=local("sensevoice-small"),
             description="非流式 · 中英等多语言 · 轻量快速，自动清理情感标签",
             backend="funasr-offline", device="cuda:0", required_file="model.pt",
             modes=("offline",),
         ),
         DictationModel(
             id="fun-asr-nano", name="Fun-ASR-Nano",
-            model_dir=snapshot("FunAudioLLM--Fun-ASR-Nano-2512"),
+            model_dir=local("fun-asr-nano"),
             description="准实时 · PyTorch FP32 / GPU · FSMN-VAD 分段，预览可修订；也支持非实时",
             backend="funasr-offline", device="cuda:0", required_file="model.pt",
             modes=("streaming", "offline"), decode_interval=1.2,
         ),
         DictationModel(
             id="qwen3-asr", name="Qwen3-ASR 1.7B",
-            model_dir=snapshot("Qwen--Qwen3-ASR-1.7B"),
+            model_dir=local("qwen3-asr"),
             description="非流式 · 多语言自动检测 · 显存和加载耗时较高",
             backend="funasr-offline", device="cuda:0", required_file="model.safetensors.index.json",
             modes=("offline",), model_key="Qwen/Qwen3-ASR-1.7B",
         ),
         DictationModel(
             id="moss-transcribe-diarize", name="MOSS-Transcribe-Diarize",
-            model_dir=project_root / "models/moss_transcribe_diarize",
+            model_dir=local("moss-transcribe-diarize"),
             description="非实时多人会议 · 0.9B / GPU · 整段联合转写、说话人编号与时间戳，支持重叠讲话但不保证无误",
             backend="moss-meeting", device="cuda:0", required_file=WEIGHT_FILE,
             required_bytes=WEIGHT_BYTES, modes=("offline",), recognition_types=("meeting",),
@@ -133,7 +133,7 @@ class LocalOfflineAsr:
         if self.model_id == "fun-asr-nano":
             from ..models.streaming_vad import FunasrStreamingVad
 
-            vad_dir = Path.home() / ".cache/modelscope/models/iic--speech_fsmn_vad_zh-cn-16k-common-pytorch/snapshots/master"
+            vad_dir = spec.model_dir.parent / "fsmn-vad"
             if not (vad_dir / "model.pt").is_file():
                 raise FileNotFoundError("缺少 Nano 实时模式所需的 FSMN-VAD，请运行 scripts/prepare_target_models.py")
             # Separate CPU VAD: never share mutable VAD caches with target mode.
@@ -264,7 +264,8 @@ class DictationController:
         self._recording_path: Path | None = None
         self._realtime_metrics: dict[str, Any] = {}
         self.max_recording_seconds = 120.0
-        self._target_factory = target_factory or TargetModels
+        target_model_root = self.project_root.parent / "models"
+        self._target_factory = target_factory or (lambda: TargetModels(target_model_root))
         self._target_models = None
         self._target_only = False
         self._recognition_type = "normal"

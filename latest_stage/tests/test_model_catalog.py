@@ -16,6 +16,13 @@ def test_catalog_contains_phase1_models():
         "punc",
     }
 
+    assert [spec.directory for spec in MODEL_SPECS.values()] == [
+        "../models/sensevoice-small",
+        "../models/fsmn-vad",
+        "../models/cam-plus",
+        "../models/punctuation",
+    ]
+
 
 def test_download_models_rejects_unknown():
     with pytest.raises(ValueError):

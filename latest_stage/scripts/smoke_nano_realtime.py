@@ -51,7 +51,7 @@ def main():
     report_dir = ROOT / "outputs/benchmarks/nano_realtime_smoke" / datetime.now().strftime("%Y%m%d-%H%M%S")
     report_dir.mkdir(parents=True)
     print("REPORT", report_dir, flush=True)
-    sample = decode_wav((Path.home() / ".cache/modelscope/models/iic--speech_campplus_sv_zh-cn_16k-common/snapshots/master/examples/speaker1_b_cn_16k.wav").read_bytes())
+    sample = decode_wav((ROOT.parent / "models/cam-plus/examples/speaker1_b_cn_16k.wav").read_bytes())
     long_sample = decode_wav((ROOT / "Funasr_tests/data/zh_audio1.wav").read_bytes())
     silence = np.zeros(16000 * 2, np.float32)
     cases = [

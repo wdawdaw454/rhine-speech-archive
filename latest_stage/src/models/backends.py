@@ -15,6 +15,9 @@ from typing import Any, Protocol
 import numpy as np
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
 @dataclass(frozen=True)
 class SpeechSegment:
     start: float
@@ -71,7 +74,7 @@ class FunasrVad:
     """
 
     def __init__(self, model_dir: str | Path, device: str = "cpu") -> None:
-        cache_dir = Path(model_dir).resolve().parent.parent / ".cache" / "jieba"
+        cache_dir = PROJECT_ROOT / ".cache" / "jieba"
         cache_dir.mkdir(parents=True, exist_ok=True)
         os.environ["JIEBA_CACHE_DIR"] = str(cache_dir)
         self.model = _load_funasr_model(model_dir, device)

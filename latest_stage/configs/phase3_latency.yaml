@@ -1,6 +1,6 @@
 # Phase 3 latency experiment: confirm early, then reduce speaker-encoder load.
 # Relative model paths are resolved against configs/.
-# configs/, so ../models points to the project-local model cache.
+# configs/, so ../../models points to the repository model root.
 project:
   sample_rate: 16000
   mono: true
@@ -15,7 +15,7 @@ audio:
 
 vad:
   model_id: "iic/speech_fsmn_vad_zh-cn-16k-common-pytorch"
-  model_dir: "../models/vad"
+  model_dir: "../../models/fsmn-vad"
   threshold: 0.5
   min_silence_duration: 0.45
   max_segment_length: 20.0
@@ -25,7 +25,7 @@ vad:
 
 speaker:
   model_id: "iic/speech_campplus_sv_zh-cn_16k-common"
-  model_dir: "../models/speaker"
+  model_dir: "../../models/cam-plus"
   min_segment_duration: 0.60
   embedding_window: 1.50
   embedding_hop: 1.00
@@ -39,7 +39,7 @@ speaker:
 asr:
   backend: sensevoice_onnx
   model_id: "iic/SenseVoiceSmall"
-  model_dir: "../models/sensevoice_small_int8_bundle"
+  model_dir: "../../models/sensevoice-onnx-int8"
   chunk_size: 0.60
   hotwords_file: null
   min_avg_confidence: null
@@ -48,7 +48,7 @@ postprocess:
   punctuation:
     enabled: true
     model_id: "iic/punc_ct-transformer_cn-en-common-vocab471067-large"
-    model_dir: "../models/punc"
+    model_dir: "../../models/punctuation"
   remove_fillers: false
   normalize_width: true
   normalize_number: true

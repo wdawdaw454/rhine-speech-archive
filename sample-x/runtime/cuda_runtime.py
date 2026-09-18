@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 
 ROOT = Path(__file__).resolve().parent.parent
+MODEL_ROOT = Path(__file__).resolve().parents[2] / 'models' / 'sample-x'
 
 
 class Weights:
@@ -68,7 +69,8 @@ class CudaDecoder:
             raise RuntimeError('CUDA is unavailable; no silent CPU fallback')
         torch.backends.cuda.matmul.allow_tf32 = False
         self.device, self.gelu = device, gelu
-        data = Weights(ROOT / 'runtime/cuda-graphs/decoder.json', ROOT / 'runtime/portable-models/no_stream/decoder_full.mnn')
+        data = Weights(MODEL_ROOT / 'cuda-graphs/decoder.json',
+                       MODEL_ROOT / 'portable-models/no_stream/decoder_full.mnn')
         convert = lambda pair: tuple(torch.from_numpy(v).to(device) for v in pair)
         norms = [convert(data.norm(o)) for o in data.ops if o['type'] == 'LayerNorm']
         linears = [convert(data.linear(o)) for o in data.ops if o['type'] == 'Convolution']
@@ -125,7 +127,8 @@ class CudaDecoder:
 
 class CudaHead:
     def __init__(self, device='cuda'):
-        data = Weights(ROOT / 'runtime/cuda-graphs/logit.json', ROOT / 'runtime/portable-models/stream/logit.mnn')
+        data = Weights(MODEL_ROOT / 'cuda-graphs/logit.json',
+                       MODEL_ROOT / 'portable-models/stream/logit.mnn')
         op = next(o for o in data.ops if o['type'] == 'Convolution')
         self.weight, self.bias = (torch.from_numpy(v).to(device) for v in data.linear(op))
 
@@ -144,9 +147,11 @@ def recognizer_class():
             start = time.perf_counter()
             self.threads, self.max_tokens = threads, max_tokens
             self.embeddings, self.tokenizer = native_runtime.embedding_table(), native_runtime.Tokenizer()
-            self.encoder = native_runtime.Session(native_runtime.ROOT / 'portable-models/stream/encoder.mnn', threads)
+            self.encoder = native_runtime.Session(
+                native_runtime.MODEL_ROOT / 'portable-models/stream/encoder.mnn', threads)
             self.decoder, self.head = CudaDecoder(), CudaHead()
-            self.cmvn = np.loadtxt(native_runtime.ROOT / 'decoded/asr/feature_extractor/cmvn.txt').astype(np.float32)
+            self.cmvn = np.loadtxt(
+                native_runtime.MODEL_ROOT / 'decoded/asr/feature_extractor/cmvn.txt').astype(np.float32)
             self.prefix = self.embeddings[self.tokenizer.encode('<audio>')][None]
             self.suffix = self.embeddings[self.tokenizer.encode('</audio>')][None]
             torch.cuda.synchronize()

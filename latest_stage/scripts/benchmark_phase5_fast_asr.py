@@ -90,7 +90,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=PROJECT_ROOT / "data/processed/aishell_full/dev/sources.jsonl",
     )
-    parser.add_argument("--model-dir", type=Path, default=PROJECT_ROOT / "models/sensevoice_small")
+    parser.add_argument("--model-dir", type=Path,
+        default=PROJECT_ROOT.parent / "models/sensevoice-small")
     parser.add_argument("--device", default="cuda:1")
     parser.add_argument(
         "--backend", choices=["uniasr", "sensevoice"], default="sensevoice"

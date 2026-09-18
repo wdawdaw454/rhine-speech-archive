@@ -20,7 +20,7 @@
 powershell -ExecutionPolicy Bypass -File .\setup-workbench.ps1 -Python C:\Path\To\python.exe
 ```
 
-以下手动步骤适合开发、排查或修复模型缓存。除特别说明外，均在仓库根目录的 PowerShell 中执行。
+以下手动步骤适合开发、排查或修复运行环境。除特别说明外，均在仓库根目录的 PowerShell 中执行。
 
 ### 2.1 后端主环境
 
@@ -32,7 +32,7 @@ python -m venv .venv-asr
 
 ## 3. 模型管理（X-011）
 
-启动工作台后进入 X-011「模型管理」，页面会显示每个模型关联的功能、安装状态、来源许可、设备与体积要求、本机位置，并提供安装 / 卸载按钮。
+启动工作台后进入 X-011「模型管理」，页面会显示每个模型关联的功能、安装状态、来源许可、设备与体积要求，并提供安装 / 卸载按钮。
 
 - **SenseVoice 实时引擎**：自动下载 SenseVoiceSmall，导出 ONNX 并生成 INT8 推理包。
 - **FSMN-VAD / CAM++**：目标说话人识别、声纹注册和 Fun-ASR-Nano 实时模式所需的轻量组件。
@@ -41,7 +41,7 @@ python -m venv .venv-asr
 - **样品-X**：模型资产不随仓库分发，需按说明手动准备；本页可卸载已放入的资产和独立环境。
 - **Silero VAD**：随仓库内置，用于样品-X端点检测，无需在线安装。
 
-模型操作会先释放当前已加载引擎；识别任务运行中会拒绝安装或卸载。卸载只删除页面声明的模型缓存、生成文件或专用运行环境，不会删除 `outputs` 中的录音、转写结果和声纹数据。样品-X模型资产没有自动下载入口，避免误取得未随仓库授权分发的权重。
+所有模型权重统一保存在仓库顶层 `models/`。ModelScope 在线安装会直接下载到对应子目录，不会识别或复用当前用户目录中的旧缓存。模型操作会先释放当前已加载引擎；识别任务运行中会拒绝安装或卸载。卸载只删除页面声明的模型文件或专用运行环境，不会删除 `outputs` 中的录音、转写结果和声纹数据。样品-X模型资产没有自动下载入口，避免误取得未随仓库授权分发的权重。
 
 ## 4. 手动模型与构建
 
@@ -51,14 +51,14 @@ python -m venv .venv-asr
 .venv-asr\Scripts\python scripts\prepare_target_models.py
 ```
 
-模型默认下载到当前用户 `~\.cache\modelscope\models\`，运行时会复用本机缓存。
+模型会下载到仓库顶层 `models/cam-plus/` 与 `models/fsmn-vad/`。
 
 ### 4.1 SenseVoice ONNX 模型
 
-如需手动重建 `models/sensevoice_small_int8_bundle`：
+如需手动重建 `models/sensevoice-onnx-int8/`：
 
 ```powershell
-# 先确保 ModelScope 缓存中已有 iic/SenseVoiceSmall
+# 先在 X-011 安装 SenseVoice Small，或手动准备 models/sensevoice-small/
 .venv-asr\Scripts\python scripts\export_sensevoice_onnx.py
 .venv-asr\Scripts\python scripts\quantize_sensevoice_onnx.py
 ```

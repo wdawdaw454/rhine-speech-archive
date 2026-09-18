@@ -133,25 +133,27 @@ class AppConfig(BaseModel):
     audio: AudioConfig = Field(default_factory=AudioConfig)
     vad: VadConfig = Field(
         default_factory=lambda: VadConfig(
-            model_id="iic/speech_fsmn_vad_zh-cn-16k-common-pytorch", model_dir="models/vad"
+            model_id="iic/speech_fsmn_vad_zh-cn-16k-common-pytorch",
+            model_dir=str(PROJECT_ROOT.parent / "models/fsmn-vad"),
         )
     )
     speaker: SpeakerConfig = Field(
         default_factory=lambda: SpeakerConfig(
-            model_id="iic/speech_campplus_sv_zh-cn_16k-common", model_dir="models/speaker"
+            model_id="iic/speech_campplus_sv_zh-cn_16k-common",
+            model_dir=str(PROJECT_ROOT.parent / "models/cam-plus"),
         )
     )
     asr: AsrConfig = Field(
         default_factory=lambda: AsrConfig(
             model_id="iic/SenseVoiceSmall",
-            model_dir="models/sensevoice_small_int8_bundle",
+            model_dir=str(PROJECT_ROOT.parent / "models/sensevoice-onnx-int8"),
         )
     )
     postprocess: PostprocessConfig = Field(
         default_factory=lambda: PostprocessConfig(
             punctuation=PunctuationConfig(
                 model_id="iic/punc_ct-transformer_cn-en-common-vocab471067-large",
-                model_dir="models/punc",
+                model_dir=str(PROJECT_ROOT.parent / "models/punctuation"),
             )
         )
     )

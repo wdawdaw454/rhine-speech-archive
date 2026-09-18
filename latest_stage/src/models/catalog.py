@@ -18,25 +18,25 @@ MODEL_SPECS: dict[str, ModelSpec] = {
         ModelSpec(
             key="asr-sensevoice",
             model_id="iic/SenseVoiceSmall",
-            directory="models/sensevoice_small",
+            directory="../models/sensevoice-small",
             description="SenseVoiceSmall prefix-redecode fast ASR",
         ),
         ModelSpec(
             key="vad",
             model_id="iic/speech_fsmn_vad_zh-cn-16k-common-pytorch",
-            directory="models/vad",
+            directory="../models/fsmn-vad",
             description="FSMN streaming VAD",
         ),
         ModelSpec(
             key="speaker",
             model_id="iic/speech_campplus_sv_zh-cn_16k-common",
-            directory="models/speaker",
+            directory="../models/cam-plus",
             description="CAM++ speaker verification / embedding",
         ),
         ModelSpec(
             key="punc",
             model_id="iic/punc_ct-transformer_cn-en-common-vocab471067-large",
-            directory="models/punc",
+            directory="../models/punctuation",
             description="Chinese-English punctuation restoration",
         ),
     )

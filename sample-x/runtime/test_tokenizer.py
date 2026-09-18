@@ -4,7 +4,7 @@ import unittest
 from native_runtime import Tokenizer
 
 
-TOKENIZER_ASSET = Path(__file__).resolve().parent / 'decoded/asr/token/vocab.txt'
+TOKENIZER_ASSET = Path(__file__).resolve().parents[2] / 'models/sample-x/decoded/asr/token/vocab.txt'
 
 
 @unittest.skipUnless(TOKENIZER_ASSET.is_file(), 'Sample-X tokenizer assets are not redistributed')

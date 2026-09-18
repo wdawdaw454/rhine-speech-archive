@@ -4,7 +4,7 @@
 
 ## 准备模型
 
-样品-X 档案需要使用者自行准备 `runtime/portable-models/` 推理资产，并从本地模型包恢复 `runtime/decoded/asr/` 中的 tokenizer 与特征配置。目录结构固定，文件名区分大小写：
+样品-X 档案需要使用者自行准备 `models/sample-x/portable-models/` 推理资产，并从本地模型包恢复 `models/sample-x/decoded/asr/` 中的 tokenizer 与特征配置。目录结构固定，文件名区分大小写：
 
 ```text
 portable-models/
@@ -27,7 +27,7 @@ decoded/asr/
    └─ vocab.txt
 ```
 
-如需 CUDA 加速，还要在 `runtime/cuda-graphs/` 放入 `decoder.json` 与 `logit.json` 架构元数据；缺失时自动使用 CPU（MNN）路径。
+如需 CUDA 加速，还要在 `models/sample-x/cuda-graphs/` 放入 `decoder.json` 与 `logit.json` 架构元数据；缺失时自动使用 CPU（MNN）路径。
 
 ## 安装环境
 

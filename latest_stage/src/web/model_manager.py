@@ -10,6 +10,8 @@ import time
 from threading import Lock, Thread
 from typing import Callable, Sequence
 
+from ..models.storage import model_directory, model_storage_root
+
 
 BUSY_STATES = {"loading", "starting", "listening", "stopping", "transcribing", "enrolling", "enroll_recording"}
 
@@ -27,6 +29,7 @@ class ManagedModel:
     estimated_size: str
     install_mode: str = "auto"
     modelscope_id: str | None = None
+    local_directory: Path | None = None
     markers: tuple[Path, ...] = ()
     install_paths: tuple[Path, ...] = ()
     manual: str | None = None
@@ -70,10 +73,8 @@ class ManagerOperation:
 
 
 def default_managed_models(project_root: Path) -> list[ManagedModel]:
-    home_cache = Path.home() / ".cache/modelscope/models"
-
-    def snapshot(name: str) -> Path:
-        return home_cache / name / "snapshots/master"
+    def local(name: str) -> Path:
+        return model_directory(project_root, name)
 
     return [
         ManagedModel(
@@ -86,10 +87,10 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             license="FunASR 生态模型",
             device="CPU",
             estimated_size="约 230 MB 生成物；构建时另需约 900 MB 源模型缓存",
-            markers=(project_root / "models/sensevoice_small_int8_bundle/model.onnx",),
+            markers=(local("sensevoice-onnx-int8") / "model.onnx",),
             install_paths=(
-                project_root / "models/sensevoice_small_onnx_bundle",
-                project_root / "models/sensevoice_small_int8_bundle",
+                local("sensevoice-onnx"),
+                local("sensevoice-onnx-int8"),
             ),
         ),
         ManagedModel(
@@ -103,8 +104,9 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="GPU 优先，可回退 CPU",
             estimated_size="约 900 MB",
             modelscope_id="iic/SenseVoiceSmall",
-            markers=(snapshot("iic--SenseVoiceSmall") / "model.pt",),
-            install_paths=(home_cache / "iic--SenseVoiceSmall",),
+            local_directory=local("sensevoice-small"),
+            markers=(local("sensevoice-small") / "model.pt",),
+            install_paths=(local("sensevoice-small"),),
         ),
         ManagedModel(
             id="fsmn-vad",
@@ -117,8 +119,9 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="CPU",
             estimated_size="轻量模型",
             modelscope_id="iic/speech_fsmn_vad_zh-cn-16k-common-pytorch",
-            markers=(snapshot("iic--speech_fsmn_vad_zh-cn-16k-common-pytorch") / "model.pt",),
-            install_paths=(home_cache / "iic--speech_fsmn_vad_zh-cn-16k-common-pytorch",),
+            local_directory=local("fsmn-vad"),
+            markers=(local("fsmn-vad") / "model.pt",),
+            install_paths=(local("fsmn-vad"),),
         ),
         ManagedModel(
             id="cam-plus",
@@ -131,8 +134,9 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="CPU",
             estimated_size="轻量模型",
             modelscope_id="iic/speech_campplus_sv_zh-cn_16k-common",
-            markers=(snapshot("iic--speech_campplus_sv_zh-cn_16k-common") / "campplus_cn_common.bin",),
-            install_paths=(home_cache / "iic--speech_campplus_sv_zh-cn_16k-common",),
+            local_directory=local("cam-plus"),
+            markers=(local("cam-plus") / "campplus_cn_common.bin",),
+            install_paths=(local("cam-plus"),),
         ),
         ManagedModel(
             id="fun-asr-nano",
@@ -145,8 +149,9 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="GPU 优先，可回退 CPU",
             estimated_size="约 2 GB 级",
             modelscope_id="FunAudioLLM/Fun-ASR-Nano-2512",
-            markers=(snapshot("FunAudioLLM--Fun-ASR-Nano-2512") / "model.pt",),
-            install_paths=(home_cache / "FunAudioLLM--Fun-ASR-Nano-2512",),
+            local_directory=local("fun-asr-nano"),
+            markers=(local("fun-asr-nano") / "model.pt",),
+            install_paths=(local("fun-asr-nano"),),
         ),
         ManagedModel(
             id="qwen3-asr",
@@ -159,8 +164,9 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="GPU 优先，可回退 CPU",
             estimated_size="约 4 GB 级",
             modelscope_id="Qwen/Qwen3-ASR-1.7B",
-            markers=(snapshot("Qwen--Qwen3-ASR-1.7B") / "model.safetensors.index.json",),
-            install_paths=(home_cache / "Qwen--Qwen3-ASR-1.7B",),
+            local_directory=local("qwen3-asr"),
+            markers=(local("qwen3-asr") / "model.safetensors.index.json",),
+            install_paths=(local("qwen3-asr"),),
         ),
         ManagedModel(
             id="moss-transcribe-diarize",
@@ -173,11 +179,11 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="NVIDIA GPU",
             estimated_size="模型约 2 GB；独立 CUDA 环境另需数 GB",
             markers=(
-                project_root / "models/moss_transcribe_diarize/model-00000-of-00001.safetensors",
+                local("moss-transcribe-diarize") / "model-00000-of-00001.safetensors",
                 project_root / ".venv-moss/Scripts/python.exe",
             ),
             install_paths=(
-                project_root / "models/moss_transcribe_diarize",
+                local("moss-transcribe-diarize"),
                 project_root / ".venv-moss",
                 project_root / ".cache/moss-wheels",
             ),
@@ -194,17 +200,17 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             estimated_size="由本地模型资产决定",
             install_mode="manual",
             markers=(
-                project_root.parent / "sample-x/runtime/portable-models/no_stream/decoder_full.mnn",
+                local("sample-x") / "portable-models/no_stream/decoder_full.mnn",
                 project_root.parent / "sample-x/.venv/Scripts/python.exe",
             ),
             install_paths=(
-                project_root.parent / "sample-x/runtime/portable-models",
-                project_root.parent / "sample-x/runtime/decoded/asr",
-                project_root.parent / "sample-x/runtime/cuda-graphs",
+                local("sample-x") / "portable-models",
+                local("sample-x") / "decoded/asr",
+                local("sample-x") / "cuda-graphs",
                 project_root.parent / "sample-x/.venv",
                 project_root.parent / "sample-x/.venv-cuda",
             ),
-            manual="请先按 sample-x/README.md 准备 runtime/portable-models 与 runtime/decoded/asr，再运行 sample-x/setup.ps1；本页可卸载已放入的资产和独立环境。",
+            manual="请先按 sample-x/README.md 准备 models/sample-x/portable-models 与 models/sample-x/decoded/asr，再运行 sample-x/setup.ps1；本页可卸载已放入的资产和独立环境。",
         ),
         ManagedModel(
             id="silero-vad",
@@ -217,7 +223,7 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="CPU",
             estimated_size="约 2.2 MB",
             install_mode="bundled",
-            markers=(project_root.parent / "sample-x/silero_vad.onnx",),
+            markers=(local("silero-vad") / "silero_vad.onnx",),
         ),
         ManagedModel(
             id="punctuation",
@@ -230,8 +236,9 @@ def default_managed_models(project_root: Path) -> list[ManagedModel]:
             device="CPU",
             estimated_size="约 300 MB 级",
             modelscope_id="iic/punc_ct-transformer_cn-en-common-vocab471067-large",
-            markers=(snapshot("iic--punc_ct-transformer_cn-en-common-vocab471067-large") / "model.pt",),
-            install_paths=(home_cache / "iic--punc_ct-transformer_cn-en-common-vocab471067-large",),
+            local_directory=local("punctuation"),
+            markers=(local("punctuation") / "model.pt",),
+            install_paths=(local("punctuation"),),
         ),
     ]
 
@@ -322,9 +329,11 @@ class ModelManager:
                 return
             self._set(operation, message=f"正在安装 {spec.name}…")
             if spec.id == "sensevoice-realtime":
-                source = self._install_modelscope("iic/SenseVoiceSmall")
-                onnx = self.project_root / "models/sensevoice_small_onnx_bundle"
-                int8 = self.project_root / "models/sensevoice_small_int8_bundle"
+                source = self._install_modelscope(
+                    "iic/SenseVoiceSmall", model_directory(self.project_root, "sensevoice-small")
+                )
+                onnx = model_directory(self.project_root, "sensevoice-onnx")
+                int8 = model_directory(self.project_root, "sensevoice-onnx-int8")
                 if not (onnx / "model.onnx").is_file():
                     self._command(operation, [
                         sys.executable,
@@ -346,7 +355,7 @@ class ModelManager:
                     "-File", str(self.project_root / "scripts/setup_moss_windows.ps1"),
                 ])
             else:
-                self._install_modelscope(spec.modelscope_id)
+                self._install_modelscope(spec.modelscope_id, spec.local_directory)
             if not all(marker.is_file() for marker in spec.markers):
                 raise RuntimeError("安装命令已结束，但未找到预期的模型文件")
             self._set(operation, state="complete", message=f"{spec.name} 已就绪")
@@ -355,12 +364,14 @@ class ModelManager:
         finally:
             self._controller.refresh_model_availability()
 
-    def _install_modelscope(self, model_id: str | None) -> str:
+    def _install_modelscope(self, model_id: str | None, target: Path | None) -> str:
         if not model_id:
             raise ValueError("缺少 ModelScope 模型 ID")
+        if target is None:
+            raise ValueError("缺少 ModelScope 本地模型目录")
         code = (
             "from modelscope import snapshot_download; "
-            f"print(snapshot_download({model_id!r}))"
+            f"print(snapshot_download({model_id!r}, local_dir={str(target)!r}))"
         )
         result = self._runner([sys.executable, "-c", code], str(self.project_root))
         if result.returncode != 0:
@@ -388,13 +399,12 @@ class ModelManager:
     def _remove(self, path: Path) -> None:
         resolved = path.resolve()
         allowed = [entry.resolve() for entry in (
-            Path.home() / ".cache/modelscope/models",
-            self.project_root / "models",
+            model_storage_root(self.project_root),
             self.project_root / ".venv-moss",
             self.project_root / ".cache/moss-wheels",
-            self.project_root.parent / "sample-x/runtime/portable-models",
-            self.project_root.parent / "sample-x/runtime/decoded/asr",
-            self.project_root.parent / "sample-x/runtime/cuda-graphs",
+            model_directory(self.project_root, "sample-x") / "portable-models",
+            model_directory(self.project_root, "sample-x") / "decoded/asr",
+            model_directory(self.project_root, "sample-x") / "cuda-graphs",
             self.project_root.parent / "sample-x/.venv",
             self.project_root.parent / "sample-x/.venv-cuda",
         )]

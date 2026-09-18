@@ -213,7 +213,7 @@ def test_default_registry_contains_local_streaming_and_offline_models(tmp_path):
     assert models[2].decode_interval == 1.2
     assert models[2].recognition_types == ("normal",)
     assert all(m.modes == ("offline",) for m in (models[1], models[3]))
-    assert all(Path.home() / ".cache/modelscope/models" in m.model_dir.parents for m in models[1:4])
+    assert all(tmp_path.parent / "models" in m.model_dir.parents for m in models[1:4])
     assert models[3].model_key == "Qwen/Qwen3-ASR-1.7B"
     assert not any("paraformer" in model.id.lower() for model in models)
     assert models[-1].recognition_types == ("meeting",)

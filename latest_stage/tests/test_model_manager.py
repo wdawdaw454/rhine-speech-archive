@@ -41,6 +41,7 @@ def _spec(tmp_path: Path, *, install_mode: str = "auto") -> ManagedModel:
         install_mode=install_mode,
         manual="请手动准备该模型" if install_mode == "manual" else None,
         modelscope_id="example/model",
+        local_directory=tmp_path.parent / "models/test-model",
         markers=(marker,),
         install_paths=(model_root,),
     )
@@ -87,26 +88,39 @@ def test_registry_reports_models_when_cache_is_empty(tmp_path, monkeypatch):
     assert next(model for model in status["models"] if model["id"] == "silero-vad")["install_mode"] == "bundled"
 
 
-def test_modelscope_markers_match_snapshot_layout(tmp_path, monkeypatch):
+def test_modelscope_markers_use_repository_model_root(tmp_path, monkeypatch):
     empty_home = tmp_path / "home"
     empty_home.mkdir()
     monkeypatch.setenv("HOME", str(empty_home))
     monkeypatch.setenv("USERPROFILE", str(empty_home))
 
     expected_files = {
-        "sensevoice-small": ("iic--SenseVoiceSmall", "model.pt"),
-        "fsmn-vad": ("iic--speech_fsmn_vad_zh-cn-16k-common-pytorch", "model.pt"),
-        "cam-plus": ("iic--speech_campplus_sv_zh-cn_16k-common", "campplus_cn_common.bin"),
-        "fun-asr-nano": ("FunAudioLLM--Fun-ASR-Nano-2512", "model.pt"),
-        "qwen3-asr": ("Qwen--Qwen3-ASR-1.7B", "model.safetensors.index.json"),
-        "punctuation": ("iic--punc_ct-transformer_cn-en-common-vocab471067-large", "model.pt"),
+        "sensevoice-small": ("sensevoice-small", "model.pt"),
+        "fsmn-vad": ("fsmn-vad", "model.pt"),
+        "cam-plus": ("cam-plus", "campplus_cn_common.bin"),
+        "fun-asr-nano": ("fun-asr-nano", "model.pt"),
+        "qwen3-asr": ("qwen3-asr", "model.safetensors.index.json"),
+        "punctuation": ("punctuation", "model.pt"),
     }
     specs = default_managed_models(tmp_path)
 
     for model_id, (repository, filename) in expected_files.items():
         spec = next(item for item in specs if item.id == model_id)
-        expected = empty_home / ".cache/modelscope/models" / repository / "snapshots/master" / filename
+        expected = tmp_path.parent / "models" / repository / filename
         assert spec.markers == (expected,)
+
+
+def test_legacy_modelscope_home_cache_is_not_reported_installed(tmp_path, monkeypatch):
+    legacy_home = tmp_path / "home"
+    legacy_home.mkdir()
+    monkeypatch.setenv("HOME", str(legacy_home))
+    monkeypatch.setenv("USERPROFILE", str(legacy_home))
+    legacy = legacy_home / ".cache/modelscope/models/legacy/snapshots/master"
+    legacy.mkdir(parents=True)
+    (legacy / "model.pt").write_text("legacy cache", encoding="utf-8")
+
+    specs = default_managed_models(tmp_path)
+    assert all(not all(marker.is_file() for marker in spec.markers) for spec in specs)
 
 
 def test_install_runs_in_background_and_refreshes_controller(tmp_path):
@@ -127,6 +141,25 @@ def test_install_runs_in_background_and_refreshes_controller(tmp_path):
     assert manager.status()["models"][0]["installed"] is True
     assert controller.released == 1
     assert controller.refreshed == 1
+
+
+def test_modelscope_installer_targets_repository_model_root(tmp_path):
+    controller = FakeController()
+    spec = _spec(tmp_path)
+    commands = []
+
+    def runner(command, _cwd):
+        commands.append(command)
+        spec.markers[0].parent.mkdir(parents=True, exist_ok=True)
+        spec.markers[0].write_text("weights", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "download complete", "")
+
+    manager = ModelManager(project_root=tmp_path, controller=controller, specs=[spec], runner=runner)
+    manager.install(spec.id)
+    _wait(manager, "complete")
+
+    installer = commands[0][commands[0].index("-c") + 1]
+    assert f"local_dir={str(spec.local_directory)!r}" in installer
 
 
 def test_manual_model_cannot_be_automatically_installed(tmp_path):
@@ -184,7 +217,7 @@ def test_uninstall_only_removes_declared_model_root(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     spec = _spec(tmp_path)
-    model_root = tmp_path / ".cache/modelscope/models/example--model"
+    model_root = tmp_path.parent / "models/example--model"
     object.__setattr__(spec, "markers", (model_root / "snapshots/master/model.bin",))
     object.__setattr__(spec, "install_paths", (model_root,))
     spec.markers[0].parent.mkdir(parents=True)

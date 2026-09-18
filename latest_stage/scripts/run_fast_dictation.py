@@ -91,7 +91,8 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument(
         "--microphone", action="store_true", help="read from the default microphone"
     )
-    parser.add_argument("--model-dir", type=Path, default=PROJECT_ROOT / "models/sensevoice_small")
+    parser.add_argument("--model-dir", type=Path,
+        default=PROJECT_ROOT.parent / "models/sensevoice-small")
     parser.add_argument("--backend", choices=("funasr", "onnx"), default="funasr")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--duration", type=float, help="microphone capture duration in seconds")
