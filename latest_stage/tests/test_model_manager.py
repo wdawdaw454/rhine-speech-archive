@@ -127,15 +127,31 @@ def test_install_runs_in_background_and_refreshes_controller(tmp_path):
     controller = FakeController()
     spec = _spec(tmp_path)
 
-    def runner(command, _cwd):
+    def stream_runner(_command, _cwd, on_event):
         spec.markers[0].parent.mkdir(parents=True, exist_ok=True)
         spec.markers[0].write_text("weights", encoding="utf-8")
-        return subprocess.CompletedProcess(command, 0, "download complete", "")
+        on_event({"type": "download", "event": "start", "filename": "model.bin", "file_size": 100, "downloaded": 0})
+        on_event({"type": "download", "event": "update", "filename": "model.bin", "file_size": 100, "downloaded": 50})
+        on_event({"type": "download", "event": "complete", "filename": "model.bin", "file_size": 100, "downloaded": 100})
+        on_event({"type": "done", "path": str(spec.local_directory)})
+        return subprocess.CompletedProcess([], 0, "download complete", "")
 
-    manager = ModelManager(project_root=tmp_path, controller=controller, specs=[spec], runner=runner)
+    manager = ModelManager(
+        project_root=tmp_path,
+        controller=controller,
+        specs=[spec],
+        stream_runner=stream_runner,
+    )
+    monkeypatch_modelscope = pytest.MonkeyPatch()
+    monkeypatch_modelscope.setattr(manager, "_modelscope_available", lambda: True)
     manager.install(spec.id)
     operation = _wait(manager, "complete")
 
+    assert operation["current_file"] == "model.bin"
+    assert operation["downloaded_bytes"] == 100
+    assert operation["total_bytes"] == 100
+    assert operation["progress"] == 1.0
+    monkeypatch_modelscope.undo()
     assert operation["started_at"] > 0
     assert operation["error"] is None
     assert manager.status()["models"][0]["installed"] is True
@@ -148,18 +164,40 @@ def test_modelscope_installer_targets_repository_model_root(tmp_path):
     spec = _spec(tmp_path)
     commands = []
 
-    def runner(command, _cwd):
+    def stream_runner(command, _cwd, on_event):
         commands.append(command)
         spec.markers[0].parent.mkdir(parents=True, exist_ok=True)
         spec.markers[0].write_text("weights", encoding="utf-8")
+        on_event({"type": "done", "path": str(spec.local_directory)})
         return subprocess.CompletedProcess(command, 0, "download complete", "")
 
-    manager = ModelManager(project_root=tmp_path, controller=controller, specs=[spec], runner=runner)
+    manager = ModelManager(
+        project_root=tmp_path,
+        controller=controller,
+        specs=[spec],
+        stream_runner=stream_runner,
+    )
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(manager, "_modelscope_available", lambda: True)
     manager.install(spec.id)
     _wait(manager, "complete")
+    monkeypatch.undo()
 
-    installer = commands[0][commands[0].index("-c") + 1]
-    assert f"local_dir={str(spec.local_directory)!r}" in installer
+    installer = commands[0]
+    assert installer[-4:] == ["--model-id", "example/model", "--target", str(spec.local_directory)]
+
+
+def test_missing_modelscope_dependency_reports_setup_guidance(tmp_path, monkeypatch):
+    from src.web import model_manager as module
+
+    spec = _spec(tmp_path)
+    manager = ModelManager(project_root=tmp_path, controller=FakeController(), specs=[spec])
+    monkeypatch.setattr(module.importlib.util, "find_spec", lambda _name: None)
+
+    manager.install(spec.id)
+    operation = _wait(manager, "error")
+
+    assert "初始化莱茵语音工作台" in operation["error"]
 
 
 def test_manual_model_cannot_be_automatically_installed(tmp_path):
@@ -197,20 +235,29 @@ def test_second_model_operation_is_rejected_while_first_runs(tmp_path):
     release = Event()
     spec = _spec(tmp_path)
 
-    def runner(_command, _cwd):
+    def stream_runner(_command, _cwd, on_event):
         entered.set()
         assert release.wait(5)
         spec.markers[0].parent.mkdir(parents=True, exist_ok=True)
         spec.markers[0].write_text("weights", encoding="utf-8")
+        on_event({"type": "done", "path": str(spec.local_directory)})
         return subprocess.CompletedProcess([], 0, "done", "")
 
-    manager = ModelManager(project_root=tmp_path, controller=FakeController(), specs=[spec], runner=runner)
+    manager = ModelManager(
+        project_root=tmp_path,
+        controller=FakeController(),
+        specs=[spec],
+        stream_runner=stream_runner,
+    )
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(manager, "_modelscope_available", lambda: True)
     manager.install(spec.id)
     assert entered.wait(5)
     with pytest.raises(RuntimeError, match="已有模型操作"):
         manager.install(spec.id)
     release.set()
     _wait(manager, "complete")
+    monkeypatch.undo()
 
 
 def test_uninstall_only_removes_declared_model_root(tmp_path, monkeypatch):

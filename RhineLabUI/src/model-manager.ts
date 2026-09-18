@@ -24,6 +24,10 @@ interface ManagerOperation {
   started_at: number;
   log: string[];
   error: string | null;
+  current_file: string | null;
+  downloaded_bytes: number;
+  total_bytes: number;
+  progress: number;
 }
 
 interface ManagerStatus {
@@ -61,6 +65,10 @@ export class ModelManagerControls {
       <div id="model-manager-list" class="model-list"></div>
       <details id="model-manager-operation" class="model-operation" hidden>
         <summary><span id="model-manager-operation-title">模型操作</span><span id="model-manager-operation-state"></span></summary>
+        <div class="model-progress-line" id="model-manager-progress-line" hidden>
+          <progress id="model-manager-progress" max="1" value="0" aria-label="模型下载进度"></progress>
+          <span id="model-manager-progress-text">正在准备下载…</span>
+        </div>
         <pre id="model-manager-log"></pre>
       </details>
       <aside class="model-storage" aria-label="模型存放说明">
@@ -147,7 +155,7 @@ export class ModelManagerControls {
   private schedule() {
     setTimeout(() => {
       void this.refresh().finally(() => this.schedule());
-    }, this.operation?.state === 'running' ? 1200 : 4000);
+    }, this.operation?.state === 'running' ? 500 : 4000);
   }
 
   private render() {
@@ -169,6 +177,7 @@ export class ModelManagerControls {
         if (install) install.disabled = this.busy();
         const uninstall = card.querySelector<HTMLButtonElement>('[data-model-uninstall]');
         if (uninstall) uninstall.disabled = this.busy() || !model.installed;
+        this.renderCardProgress(card, model.id);
       });
     }
 
@@ -179,14 +188,71 @@ export class ModelManagerControls {
       const model = this.models.find(item => item.id === operation.id);
       this.el('operation-title').textContent = `${actionText[operation.action] || operation.action} · ${model?.name || operation.id}`;
       this.el('operation-state').textContent = operation.state === 'running' ? operation.message : `${operation.message}${operation.error ? `：${operation.error}` : ''}`;
-      this.el('log').textContent = operation.log.join('\n') || '暂无命令输出。下载进度通常显示在命令行工具内部，完成后会更新状态。';
+      this.renderOperationProgress();
+      this.el('log').textContent = operation.log.join('\n') || '暂无命令输出。';
       if (operation.state === 'running') details.open = true;
+    } else {
+      this.renderOperationProgress();
     }
     this.el<HTMLButtonElement>('refresh').disabled = this.operation?.state === 'running';
   }
 
   private busy() {
     return Boolean(this.pending) || this.operation?.state === 'running';
+  }
+
+  private renderOperationProgress() {
+    const operation = this.operation;
+    const line = this.el('progress-line');
+    const progress = this.el<HTMLProgressElement>('progress');
+    const text = this.el('progress-text');
+    const visible = operation?.action === 'install' && operation.state === 'running';
+    line.hidden = !visible;
+    if (!visible || !operation) return;
+    if (operation.total_bytes > 0) {
+      progress.value = Math.min(1, Math.max(0, operation.progress));
+    } else {
+      progress.removeAttribute('value');
+    }
+    text.textContent = operation.total_bytes > 0
+      ? `${this.size(operation.downloaded_bytes)} / ${this.size(operation.total_bytes)} · ${Math.round(operation.progress * 100)}%`
+      : operation.current_file
+        ? `正在下载 ${operation.current_file}`
+        : '正在准备下载…';
+  }
+
+  private renderCardProgress(card: HTMLElement, modelId: string) {
+    const operation = this.operation;
+    const line = card.querySelector<HTMLElement>('.model-progress-line');
+    const progress = card.querySelector<HTMLProgressElement>('.model-progress');
+    const text = card.querySelector<HTMLElement>('.model-progress-text');
+    if (!line || !progress || !text) return;
+    const active = operation?.id === modelId && operation.action === 'install' && operation.state === 'running';
+    line.hidden = !active;
+    if (!active || !operation) return;
+    if (operation.total_bytes > 0) {
+      progress.value = Math.min(1, Math.max(0, operation.progress));
+    } else {
+      progress.removeAttribute('value');
+    }
+    text.textContent = operation.total_bytes > 0
+      ? `${this.size(operation.downloaded_bytes)} / ${this.size(operation.total_bytes)} · ${Math.round(operation.progress * 100)}%`
+      : operation.current_file
+        ? `正在下载 ${operation.current_file}`
+        : '正在准备下载…';
+  }
+
+  private size(value: number) {
+    if (value < 1024) return `${Math.round(value)} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let size = value / 1024;
+    let unit = units[0];
+    for (const next of units) {
+      unit = next;
+      if (size < 1024 || next === 'GB') break;
+      size /= 1024;
+    }
+    return `${size >= 10 ? size.toFixed(0) : size.toFixed(1)} ${unit}`;
   }
 
   private card(model: ManagedModel) {
@@ -210,6 +276,10 @@ export class ModelManagerControls {
         <div><dt>设备 / 空间</dt><dd>${esc(model.device)}<small>${esc(model.estimated_size)}</small></dd></div>
       </dl>
       ${model.manual ? `<p class="model-manual">${esc(model.manual)}</p>` : ''}
+      <div class="model-progress-line" hidden>
+        <progress class="model-progress" max="1" value="0" aria-label="${esc(model.name)}下载进度"></progress>
+        <span class="model-progress-text">正在准备下载…</span>
+      </div>
       <footer>${install}${uninstall}</footer>
     </article>`;
   }

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import importlib.util
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -59,6 +61,10 @@ class ManagerOperation:
     started_at: float = field(default_factory=time.time)
     log: list[str] = field(default_factory=list)
     error: str | None = None
+    current_file: str | None = None
+    downloaded_bytes: int = 0
+    total_bytes: int = 0
+    progress: float = 0.0
 
     def public_dict(self) -> dict:
         return {
@@ -69,6 +75,10 @@ class ManagerOperation:
             "started_at": self.started_at,
             "log": list(self.log),
             "error": self.error,
+            "current_file": self.current_file,
+            "downloaded_bytes": self.downloaded_bytes,
+            "total_bytes": self.total_bytes,
+            "progress": self.progress,
         }
 
 
@@ -251,6 +261,7 @@ class ModelManager:
         controller,
         specs: Sequence[ManagedModel] | None = None,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+        stream_runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
         external_busy: Callable[[], bool] | None = None,
         external_lock=None,
     ) -> None:
@@ -261,6 +272,7 @@ class ModelManager:
         self._lock = Lock()
         self._operation: ManagerOperation | None = None
         self._runner = runner or self._run
+        self._stream_runner = stream_runner or self._run_stream
         self._external_busy = external_busy or (lambda: False)
         self._external_lock = external_lock
 
@@ -330,7 +342,9 @@ class ModelManager:
             self._set(operation, message=f"正在安装 {spec.name}…")
             if spec.id == "sensevoice-realtime":
                 source = self._install_modelscope(
-                    "iic/SenseVoiceSmall", model_directory(self.project_root, "sensevoice-small")
+                    operation,
+                    "iic/SenseVoiceSmall",
+                    model_directory(self.project_root, "sensevoice-small"),
                 )
                 onnx = model_directory(self.project_root, "sensevoice-onnx")
                 int8 = model_directory(self.project_root, "sensevoice-onnx-int8")
@@ -355,7 +369,7 @@ class ModelManager:
                     "-File", str(self.project_root / "scripts/setup_moss_windows.ps1"),
                 ])
             else:
-                self._install_modelscope(spec.modelscope_id, spec.local_directory)
+                self._install_modelscope(operation, spec.modelscope_id, spec.local_directory)
             if not all(marker.is_file() for marker in spec.markers):
                 raise RuntimeError("安装命令已结束，但未找到预期的模型文件")
             self._set(operation, state="complete", message=f"{spec.name} 已就绪")
@@ -364,19 +378,49 @@ class ModelManager:
         finally:
             self._controller.refresh_model_availability()
 
-    def _install_modelscope(self, model_id: str | None, target: Path | None) -> str:
+    def _install_modelscope(
+        self,
+        operation: ManagerOperation,
+        model_id: str | None,
+        target: Path | None,
+    ) -> str:
         if not model_id:
             raise ValueError("缺少 ModelScope 模型 ID")
         if target is None:
             raise ValueError("缺少 ModelScope 本地模型目录")
-        code = (
-            "from modelscope import snapshot_download; "
-            f"print(snapshot_download({model_id!r}, local_dir={str(target)!r}))"
+        if not self._modelscope_available():
+            raise RuntimeError("模型下载组件未安装。请先运行仓库根目录的「初始化莱茵语音工作台.cmd」，再回到此页安装模型。")
+        destination = ""
+
+        def accept(event: dict) -> None:
+            nonlocal destination
+            if event.get("type") == "done":
+                destination = str(event.get("path", ""))
+                return
+            if event.get("type") == "download":
+                self._update_download_progress(operation, event)
+
+        result = self._stream_runner(
+            [
+                sys.executable,
+                str(self.project_root / "scripts/install_modelscope_model.py"),
+                "--model-id", model_id,
+                "--target", str(target),
+            ],
+            str(self.project_root),
+            accept,
         )
-        result = self._runner([sys.executable, "-c", code], str(self.project_root))
         if result.returncode != 0:
-            raise RuntimeError(result.stdout.strip() or f"ModelScope 模型下载失败：{model_id}")
-        return result.stdout.strip().splitlines()[-1]
+            lines = [line for line in result.stdout.splitlines() if line.strip()]
+            error_lines = [line for line in lines if not line.startswith("{")]
+            detail = error_lines[-1] if error_lines else (lines[-1] if lines else "")
+            raise RuntimeError(detail or f"ModelScope 模型下载失败：{model_id}")
+        if not destination:
+            raise RuntimeError("ModelScope 未返回模型保存位置")
+        return destination
+
+    def _modelscope_available(self) -> bool:
+        return importlib.util.find_spec("modelscope") is not None
 
     def _command(self, operation: ManagerOperation, command: list[str]) -> None:
         result = self._runner(command, str(self.project_root))
@@ -395,6 +439,75 @@ class ModelManager:
             stderr=subprocess.STDOUT,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
+
+    def _run_stream(
+        self,
+        command: list[str],
+        cwd: str,
+        on_event: Callable[[dict], None],
+    ) -> subprocess.CompletedProcess[str]:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        output: list[str] = []
+        assert process.stdout is not None
+        for raw_line in process.stdout:
+            line = raw_line.rstrip("\r\n")
+            output.append(line)
+            if not line.startswith("{"):
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict):
+                on_event(event)
+        returncode = process.wait()
+        return subprocess.CompletedProcess(command, returncode, "\n".join(output), "")
+
+    def _update_download_progress(self, operation: ManagerOperation, event: dict) -> None:
+        filename = str(event.get("filename") or "模型文件")
+        file_size = max(0, int(event.get("file_size", 0)))
+        downloaded = max(0, int(event.get("downloaded", 0)))
+        completed = event.get("event") == "complete"
+        if completed and file_size:
+            downloaded = file_size
+        with self._lock:
+            downloads = getattr(operation, "_downloads", None)
+            if downloads is None:
+                downloads = {}
+                operation._downloads = downloads  # type: ignore[attr-defined]
+            previous_size, _ = downloads.get(filename, (0, 0))
+            downloads[filename] = (file_size or previous_size, downloaded)
+            operation.current_file = filename
+            operation.total_bytes = sum(size for size, _ in downloads.values())
+            operation.downloaded_bytes = sum(done for _, done in downloads.values())
+            operation.progress = (
+                operation.downloaded_bytes / operation.total_bytes
+                if operation.total_bytes and operation.downloaded_bytes <= operation.total_bytes
+                else 0.0
+            )
+            operation.message = (
+                f"正在下载 {filename} · "
+                f"{self._size_text(operation.downloaded_bytes)} / {self._size_text(operation.total_bytes)}"
+                + (f" · {operation.progress:.0%}" if operation.progress else "")
+            )
+
+    @staticmethod
+    def _size_text(size: int) -> str:
+        value = float(size)
+        for unit in ("B", "KB", "MB", "GB"):
+            if value < 1024 or unit == "GB":
+                return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
+            value /= 1024
+        return f"{size} B"
 
     def _remove(self, path: Path) -> None:
         resolved = path.resolve()

@@ -31,6 +31,10 @@
 .model-operation summary { display: flex; justify-content: space-between; gap: 16px; min-height: 42px; align-items: center; cursor: pointer; }
 .model-operation summary span:last-child { color: var(--speech-muted, #77756d); text-align: right; }
 .model-operation pre { max-height: 190px; overflow: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.6; }
+.model-progress-line { display: grid; grid-template-columns: minmax(120px, 220px) minmax(0, 1fr); align-items: center; gap: 12px; margin: 10px 0 12px; }
+.model-progress-line[hidden] { display: none; }
+.model-progress-line progress { width: 100%; height: 8px; accent-color: var(--theme-accent, #9b7247); }
+.model-progress-line span { min-width: 0; overflow-wrap: anywhere; color: var(--speech-muted, #77756d); font-size: 12px; }
 .model-storage { border-top: 1px solid var(--speech-line, #aaa59a); margin-top: 16px; padding-top: 12px; }
 .model-storage h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
 .model-storage p { margin: 0; font-size: 13px; line-height: 1.8; color: var(--speech-muted, #77756d); }
@@ -39,6 +43,7 @@
 .model-manager button:not(:disabled):hover, .model-manager a:hover { color: var(--theme-accent, #9b7247); }
 
 [data-layout="portrait"] .model-manager-head, [data-layout="compact"] .model-manager-head { flex-direction: column; }
+[data-layout="portrait"] .model-progress-line, [data-layout="compact"] .model-progress-line { grid-template-columns: minmax(90px, 150px) minmax(0, 1fr); gap: 8px; }
 [data-layout="portrait"] .model-card dl, [data-layout="compact"] .model-card dl { grid-template-columns: 1fr; }
 [data-layout="portrait"] .model-card footer, [data-layout="compact"] .model-card footer { flex-direction: column; align-items: stretch; gap: 8px; }
 [data-layout="portrait"] .model-card header, [data-layout="compact"] .model-card header { grid-template-columns: 1fr; }
